@@ -660,6 +660,28 @@ const ridge=mountainRing(950,-260,60,55,11,'#5b6f7d','#8da0b2',120); ridge.rende
 mountains.children[0].renderOrder=-2; scene.add(mountains);
 
 /* ---------------- procedural textures ---------------- */
+function brickTextures(){ // 512px = 0.864 m: four 21.6 cm brick modules across, twelve 7.2 cm courses up, running bond
+  const N=512, c=canvas(N,N), g=c.getContext('2d'), hc=canvas(N,N), h=hc.getContext('2d'), r=mulberry(4242), RW=N/4, RH=N/12, M=6;
+  const cols=['#8e3b2a','#9b4530','#7d3424','#a14e36','#86412f','#6f2f22','#a85a3e','#93402c','#b06246'];
+  g.fillStyle='#b8b0a3'; g.fillRect(0,0,N,N); h.fillStyle='#3a3a3a'; h.fillRect(0,0,N,N);
+  for (let row=0;row<12;row++){ const off=row%2?RW/2:0;
+    for (let k=-1;k<5;k++){ const x0=k*RW+off+M/2, y0=row*RH+M/2, w=RW-M, hh=RH-M, col=new T.Color(cols[(r()*cols.length)|0]).multiplyScalar(0.88+r()*0.2);
+      if (r()<0.12) col.multiplyScalar(0.7);   // the odd over-fired brick
+      g.fillStyle='#'+col.getHexString(); g.fillRect(x0,y0,w,hh);
+      const gr=g.createLinearGradient(x0,0,x0+w,0); gr.addColorStop(0,'rgba(0,0,0,'+(r()*0.18)+')'); gr.addColorStop(0.5,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,'+(r()*0.18)+')'); g.fillStyle=gr; g.fillRect(x0,y0,w,hh);
+      for (let b=0;b<3;b++){ h.fillStyle='rgb('+(150+b*35)+','+(150+b*35)+','+(150+b*35)+')'; h.fillRect(x0+b,y0+b,w-b*2,hh-b*2); } } }
+  const im=g.getImageData(0,0,N,N), hm=h.getImageData(0,0,N,N);
+  for (let p=0;p<N*N;p++){ const n=(r()-0.5)*26, pit=r()<0.012?-60:0; for (let ch=0;ch<3;ch++) im.data[p*4+ch]=clamp(im.data[p*4+ch]+n,0,255); for (let ch=0;ch<3;ch++) hm.data[p*4+ch]=clamp(hm.data[p*4+ch]+n*0.6+pit,0,255); }
+  g.putImageData(im,0,0); h.putImageData(hm,0,0);
+  const map=tex(c), nrm=tex(normalFromHeight(hc,4),false);
+  const rot=src=>{ const o=canvas(N,N), x=o.getContext('2d'); x.translate(N/2,N/2); x.rotate(Math.PI/2); x.drawImage(src,-N/2,-N/2); return o; };
+  const soldier=tex(rot(c)), soldierN=tex(normalFromHeight(rot(hc),4),false); soldier.repeat.set(1,0.26); soldierN.repeat.set(1,0.26);
+  return {map,nrm,soldier,soldierN}; }
+function worldUV(geo,ox,oy,oz){ // texture boxes by real size so every brick is the same size on every face
+  const p=geo.attributes.position, n=geo.attributes.normal, uv=geo.attributes.uv, S=0.864;
+  for (let k=0;k<p.count;k++){ const x=p.getX(k)+ox, y=p.getY(k)+oy, z=p.getZ(k)+oz, ax=Math.abs(n.getX(k)), ay=Math.abs(n.getY(k));
+    if (ax>0.5) uv.setXY(k,z/S,y/S); else if (ay>0.5) uv.setXY(k,x/S,z/S); else uv.setXY(k,x/S,y/S); }
+  uv.needsUpdate=true; }
 function normalFromHeight(hc,strength){
   const w=hc.width,h=hc.height, src=hc.getContext('2d').getImageData(0,0,w,h).data, out=canvas(w,h), og=out.getContext('2d'), im=og.createImageData(w,h);
   const L=(x,y)=>src[(((y+h)%h)*w+((x+w)%w))*4]/255;
@@ -1314,6 +1336,68 @@ function updatePiles(){ DUST_U.value=snowLoad;
 
 /* ---------------- first-person rider ---------------- */
 const rig=new T.Group(); camera.add(rig); let avatar=null;
+
+/* ---------------- the rider's head: a friendly, natural face, hair and five hats (shared by chase view and the dressing room) ---------------- */
+const HEADS=[];
+const SKIN=new T.MeshStandardMaterial({color:0xd49a78,roughness:0.7});
+function makeFace(head){
+  const skull=new T.Mesh(new T.SphereGeometry(0.105,28,22),SKIN); skull.scale.set(0.92,1.1,0.98); head.add(skull);
+  const jaw=new T.Mesh(new T.SphereGeometry(0.075,20,14),SKIN); jaw.scale.set(1,0.8,0.95); jaw.position.set(0,-0.055,0.022); head.add(jaw);
+  const white=new T.MeshStandardMaterial({color:0xf6f3ee,roughness:0.3}), iris=new T.MeshStandardMaterial({color:0x5a3a22,roughness:0.25}), pupil=new T.MeshStandardMaterial({color:0x0c0a09,roughness:0.2});
+  const brow=new T.MeshStandardMaterial({color:0x4a2e1a,roughness:0.9}), lip=new T.MeshStandardMaterial({color:0xc06a62,roughness:0.5}), blush=new T.MeshStandardMaterial({color:0xf09a8a,roughness:0.9,transparent:true,opacity:0.32,depthWrite:false});
+  for (const sx of [-1,1]){
+    const eye=new T.Group(); eye.position.set(sx*0.034,0.008,0.089); head.add(eye);
+    const sc=new T.Mesh(new T.SphereGeometry(0.0145,16,12),white); sc.scale.set(1.15,0.82,0.85); eye.add(sc);
+    const ir=new T.Mesh(new T.SphereGeometry(0.0085,14,10),iris); ir.position.z=0.0105; ir.scale.z=0.45; eye.add(ir);
+    const pu=new T.Mesh(new T.SphereGeometry(0.0042,10,8),pupil); pu.position.z=0.0135; pu.scale.z=0.35; eye.add(pu);
+    const gl=new T.Mesh(new T.SphereGeometry(0.0016,6,4),new T.MeshBasicMaterial({color:0xffffff})); gl.position.set(0.003,0.0035,0.0148); eye.add(gl);
+    const lid=new T.Mesh(new T.SphereGeometry(0.0155,16,8,0,Math.PI*2,0,Math.PI*0.42),SKIN); lid.scale.set(1.18,0.9,0.75); lid.rotation.x=-0.25; eye.add(lid);   // upper lids give a relaxed, natural look
+    const bw=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(-0.017,-0.002,0),new T.Vector3(0,0.004,0.002),new T.Vector3(0.017,-0.001,0)]),8,0.0028,5,false),brow);
+    bw.position.set(sx*0.035,0.033,0.094); bw.rotation.z=sx*-0.08; head.add(bw);
+    const ear=new T.Mesh(new T.SphereGeometry(0.024,12,10),SKIN); ear.scale.set(0.45,1,0.75); ear.position.set(sx*0.096,0.002,0.0); head.add(ear);
+    }
+  const nose=new T.Mesh(new T.SphereGeometry(0.016,14,10),SKIN); nose.scale.set(0.85,1,1.05); nose.position.set(0,-0.012,0.1); head.add(nose);
+  const bridge=new T.Mesh(new T.CylinderGeometry(0.007,0.011,0.032,10),SKIN); bridge.position.set(0,0.008,0.098); bridge.rotation.x=0.25; head.add(bridge);
+  const mouth=new T.Mesh(new T.TorusGeometry(0.019,0.0045,6,16,Math.PI*0.8),lip); mouth.rotation.z=Math.PI+Math.PI*0.1; mouth.position.set(0,-0.046,0.097); mouth.scale.set(1,0.55,1); head.add(mouth);
+  const lip2=new T.Mesh(new T.SphereGeometry(0.012,10,8),lip); lip2.scale.set(1.5,0.4,0.6); lip2.position.set(0,-0.055,0.097); head.add(lip2);
+  head.userData.lashes=[]; for (const sx of [-1,1]){ const l=new T.Mesh(new T.TorusGeometry(0.0145,0.0018,4,10,Math.PI),pupil); l.position.set(sx*0.034,0.012,0.097); l.scale.set(1.15,0.7,1); l.rotation.x=-0.3; head.add(l); head.userData.lashes.push(l); } }
+function makeHeadwear(face){ const head=new T.Group(); head.rotation.y=Math.PI; head.position.y=0.032; head.scale.setScalar(0.93); face.add(head);   // headwear was modelled facing -z; the face looks down +z
+    // five hats
+    const hats=[]; const mk=()=>{ const g=new T.Group(); head.add(g); hats.push(g); return g; };
+    const knitTex=knitTexturesC('#b5161e','#efe5d0');
+    { const g=mk(), knit=new T.MeshStandardMaterial({map:knitTex.map,roughness:0.9});   // red pom toque
+      const top=new T.Mesh(new T.SphereGeometry(0.122,18,10,0,Math.PI*2,0,Math.PI/2),knit); top.position.y=0.03; g.add(top);
+      const cuff=new T.Mesh(new T.CylinderGeometry(0.126,0.126,0.05,18),new T.MeshStandardMaterial({map:knitTex.rib,roughness:0.95})); cuff.position.y=0.04; g.add(cuff);
+      const pom=new T.Mesh(new T.SphereGeometry(0.045,10,8),new T.MeshStandardMaterial({color:0xf4f0e8,roughness:1})); pom.position.y=0.17; g.add(pom); }
+    { const g=mk(), st=(()=>{ const c=canvas(16,64), x=c.getContext('2d'); for (let k=0;k<8;k++){ x.fillStyle=k%2?'#f2f2f2':'#2a5db0'; x.fillRect(0,k*8,16,8); } return tex(c); })();   // striped beanie
+      const top=new T.Mesh(new T.SphereGeometry(0.124,18,12,0,Math.PI*2,0,Math.PI*0.55),new T.MeshStandardMaterial({map:st,roughness:0.9})); top.scale.y=1.15; top.position.y=0.015; g.add(top);
+      const fold=new T.Mesh(new T.TorusGeometry(0.122,0.02,8,24),new T.MeshStandardMaterial({color:0x2a5db0,roughness:0.9})); fold.rotation.x=Math.PI/2; fold.position.y=0.03; g.add(fold); }
+    { const g=mk(), br=new T.MeshStandardMaterial({color:0x6b4a2e,roughness:0.85}), fu=new T.MeshStandardMaterial({color:0xe9dcc4,roughness:1});   // trapper
+      const top=new T.Mesh(new T.SphereGeometry(0.128,18,10,0,Math.PI*2,0,Math.PI/2),br); top.position.y=0.03; g.add(top);
+      const brim=new T.Mesh(new T.TorusGeometry(0.125,0.03,8,24),fu); brim.rotation.x=Math.PI/2; brim.position.y=0.035; g.add(brim);
+      for (const sx of [-1,1]){ const flap=new T.Mesh(new T.SphereGeometry(0.06,12,10),fu); flap.scale.set(0.45,1.2,0.9); flap.position.set(sx*0.12,-0.04,0.01); g.add(flap); } }
+    { const g=mk(), gr=new T.MeshStandardMaterial({color:0x1f7a34,roughness:0.85}), fu=new T.MeshStandardMaterial({color:0xf4f0e8,roughness:1});   // elf hat
+      const cone=new T.Mesh(new T.ConeGeometry(0.125,0.42,18,6),gr); cone.position.set(0,0.24,0.06); cone.rotation.x=0.55; g.add(cone);
+      const band=new T.Mesh(new T.TorusGeometry(0.125,0.03,8,24),fu); band.rotation.x=Math.PI/2; band.position.y=0.04; g.add(band);
+      const bell=new T.Mesh(new T.SphereGeometry(0.035,10,8),new T.MeshStandardMaterial({color:0xf2c04a,metalness:0.6,roughness:0.25})); bell.position.set(0,0.38,0.27); g.add(bell); }
+    { const g=mk(), sh=new T.MeshStandardMaterial({color:0xf2f4f6,roughness:0.18,metalness:0.1});   // ski helmet
+      const top=new T.Mesh(new T.SphereGeometry(0.135,20,12,0,Math.PI*2,0,Math.PI*0.55),sh); top.scale.set(1,1.05,1.1); top.position.y=0.01; g.add(top);
+      const stripe=new T.Mesh(new T.TorusGeometry(0.11,0.012,6,24,Math.PI),new T.MeshStandardMaterial({color:0xef6a2e,roughness:0.4})); stripe.rotation.set(0,Math.PI/2,0); stripe.position.y=0.03; g.add(stripe); }
+    // hair: a short crop for the boy, long braids for the girl
+    const hairM=new T.MeshStandardMaterial({color:0x4a2e1a,roughness:0.8}); RM.hair=hairM;
+    const boyHair=new T.Group(); head.add(boyHair); { const h=new T.Mesh(new T.SphereGeometry(0.118,16,10,0,Math.PI*2,Math.PI*0.45,Math.PI*0.25),hairM); h.position.set(0,0.01,0.01); boyHair.add(h); }
+    const girlHair=new T.Group(); head.add(girlHair);
+    { const back=new T.Mesh(new T.SphereGeometry(0.122,16,12,0,Math.PI,Math.PI*0.3,Math.PI*0.45),hairM); back.rotation.y=Math.PI/2+Math.PI/2; back.position.z=0.01; girlHair.add(back);
+      for (const sx of [-1,1]){ const pts=[new T.Vector3(sx*0.09,-0.02,0.05),new T.Vector3(sx*0.12,-0.12,0.04),new T.Vector3(sx*0.13,-0.24,0.0),new T.Vector3(sx*0.12,-0.34,-0.04)];
+        girlHair.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),16,0.03,8,false),hairM));
+        const tie=new T.Mesh(new T.SphereGeometry(0.03,8,6),new T.MeshStandardMaterial({color:0xd6457a,roughness:0.5})); tie.position.set(sx*0.12,-0.34,-0.04); girlHair.add(tie); } }
+  // girls: hair framing the face as well as the braids
+  { const hairM=RM.hair; for (const sx of [-1,1]){ const lock=new T.Mesh(new T.SphereGeometry(0.04,12,10),hairM); lock.scale.set(0.45,1.3,0.7); lock.position.set(sx*0.088,-0.02,0.04); girlHair.add(lock); }
+    const fringe=new T.Mesh(new T.SphereGeometry(0.1,18,10,0,Math.PI*2,0,Math.PI*0.32),hairM); fringe.scale.set(0.98,0.9,1.04); fringe.position.set(0,0.035,0.012); girlHair.add(fringe);
+    const bf=new T.Mesh(new T.SphereGeometry(0.1,18,10,0,Math.PI*2,0,Math.PI*0.3),hairM); bf.scale.set(0.96,0.85,1.02); bf.position.set(0,0.03,0.01); boyHair.add(bf); }
+  return {hats,hair:{boy:boyHair,girl:girlHair},head:face};
+}
+
 /* ---------------- what your rider wears ---------------- */
 const RM={mitts:[],cuffs:[]};   // the rider's materials, filled in as the rider is built
 const PLAID=(()=>{ const c=canvas(128,128), g=c.getContext('2d'); g.fillStyle='#a3161c'; g.fillRect(0,0,128,128); g.fillStyle='rgba(15,10,10,.85)';
@@ -1547,45 +1631,8 @@ function makeMitten(sx,KN){
   { avatar=new T.Group(); rig.add(avatar); avatar.visible=false;
     const tg=new T.CylinderGeometry(0.17,0.2,1,18,1); tg.translate(0,0.5,0); const torso=new T.Mesh(tg,jacket); avatar.add(torso); avatar.userData.torso=torso;
     const sh=new T.Mesh(new T.SphereGeometry(0.2,18,12),jacket); sh.scale.set(1.25,0.6,0.9); avatar.add(sh); avatar.userData.sh=sh;
-    const skin=new T.MeshStandardMaterial({color:0xe8b896,roughness:0.6});
     const head=new T.Group(); avatar.add(head); avatar.userData.head=head;
-    head.add(new T.Mesh(new T.SphereGeometry(0.115,18,14),skin));
-    const gog=new T.Mesh(new T.TorusGeometry(0.112,0.03,8,24),new T.MeshStandardMaterial({color:0x1a1d22,roughness:0.3})); gog.rotation.x=Math.PI/2; gog.position.y=0.02; head.add(gog);
-    const lens=new T.Mesh(new T.SphereGeometry(0.06,12,8),new T.MeshStandardMaterial({color:0xff8a2a,roughness:0.1,metalness:0.6})); lens.scale.set(1.6,0.6,0.5); lens.position.set(0,0.025,-0.1); head.add(lens);
-    const nose=new T.Mesh(new T.SphereGeometry(0.018,10,8),new T.MeshStandardMaterial({color:0xe9a086,roughness:0.6})); nose.position.set(0,-0.02,-0.113); head.add(nose);
-    const smile=new T.Mesh(new T.TorusGeometry(0.03,0.006,6,12,Math.PI),new T.MeshStandardMaterial({color:0x7a2a22,roughness:0.6})); smile.rotation.set(0,0,Math.PI); smile.position.set(0,-0.05,-0.108); head.add(smile);
-    for (const sx of [-1,1]){ const ch=new T.Mesh(new T.SphereGeometry(0.02,8,6),new T.MeshStandardMaterial({color:0xf0a090,roughness:0.8,transparent:true,opacity:0.7})); ch.position.set(sx*0.06,-0.03,-0.095); head.add(ch); }
-    // hair: a short crop for the boy, long braids for the girl
-    const hairM=new T.MeshStandardMaterial({color:0x4a2e1a,roughness:0.8}); RM.hair=hairM;
-    const boyHair=new T.Group(); head.add(boyHair); { const h=new T.Mesh(new T.SphereGeometry(0.118,16,10,0,Math.PI*2,Math.PI*0.45,Math.PI*0.25),hairM); h.position.set(0,0.01,0.01); boyHair.add(h); }
-    const girlHair=new T.Group(); head.add(girlHair);
-    { const back=new T.Mesh(new T.SphereGeometry(0.122,16,12,0,Math.PI,Math.PI*0.3,Math.PI*0.45),hairM); back.rotation.y=Math.PI/2+Math.PI/2; back.position.z=0.01; girlHair.add(back);
-      for (const sx of [-1,1]){ const pts=[new T.Vector3(sx*0.09,-0.02,0.05),new T.Vector3(sx*0.12,-0.12,0.04),new T.Vector3(sx*0.13,-0.24,0.0),new T.Vector3(sx*0.12,-0.34,-0.04)];
-        girlHair.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),16,0.03,8,false),hairM));
-        const tie=new T.Mesh(new T.SphereGeometry(0.03,8,6),new T.MeshStandardMaterial({color:0xd6457a,roughness:0.5})); tie.position.set(sx*0.12,-0.34,-0.04); girlHair.add(tie); } }
-    avatar.userData.hair={boy:boyHair,girl:girlHair};
-    // five hats
-    const hats=[]; const mk=()=>{ const g=new T.Group(); head.add(g); hats.push(g); return g; };
-    const knitTex=knitTexturesC('#b5161e','#efe5d0');
-    { const g=mk(), knit=new T.MeshStandardMaterial({map:knitTex.map,roughness:0.9});   // red pom toque
-      const top=new T.Mesh(new T.SphereGeometry(0.122,18,10,0,Math.PI*2,0,Math.PI/2),knit); top.position.y=0.03; g.add(top);
-      const cuff=new T.Mesh(new T.CylinderGeometry(0.126,0.126,0.05,18),new T.MeshStandardMaterial({map:knitTex.rib,roughness:0.95})); cuff.position.y=0.04; g.add(cuff);
-      const pom=new T.Mesh(new T.SphereGeometry(0.045,10,8),new T.MeshStandardMaterial({color:0xf4f0e8,roughness:1})); pom.position.y=0.17; g.add(pom); }
-    { const g=mk(), st=(()=>{ const c=canvas(16,64), x=c.getContext('2d'); for (let k=0;k<8;k++){ x.fillStyle=k%2?'#f2f2f2':'#2a5db0'; x.fillRect(0,k*8,16,8); } return tex(c); })();   // striped beanie
-      const top=new T.Mesh(new T.SphereGeometry(0.124,18,12,0,Math.PI*2,0,Math.PI*0.55),new T.MeshStandardMaterial({map:st,roughness:0.9})); top.scale.y=1.15; top.position.y=0.015; g.add(top);
-      const fold=new T.Mesh(new T.TorusGeometry(0.122,0.02,8,24),new T.MeshStandardMaterial({color:0x2a5db0,roughness:0.9})); fold.rotation.x=Math.PI/2; fold.position.y=0.03; g.add(fold); }
-    { const g=mk(), br=new T.MeshStandardMaterial({color:0x6b4a2e,roughness:0.85}), fu=new T.MeshStandardMaterial({color:0xe9dcc4,roughness:1});   // trapper
-      const top=new T.Mesh(new T.SphereGeometry(0.128,18,10,0,Math.PI*2,0,Math.PI/2),br); top.position.y=0.03; g.add(top);
-      const brim=new T.Mesh(new T.TorusGeometry(0.125,0.03,8,24),fu); brim.rotation.x=Math.PI/2; brim.position.y=0.035; g.add(brim);
-      for (const sx of [-1,1]){ const flap=new T.Mesh(new T.SphereGeometry(0.06,12,10),fu); flap.scale.set(0.45,1.2,0.9); flap.position.set(sx*0.12,-0.04,0.01); g.add(flap); } }
-    { const g=mk(), gr=new T.MeshStandardMaterial({color:0x1f7a34,roughness:0.85}), fu=new T.MeshStandardMaterial({color:0xf4f0e8,roughness:1});   // elf hat
-      const cone=new T.Mesh(new T.ConeGeometry(0.125,0.42,18,6),gr); cone.position.set(0,0.24,0.06); cone.rotation.x=0.55; g.add(cone);
-      const band=new T.Mesh(new T.TorusGeometry(0.125,0.03,8,24),fu); band.rotation.x=Math.PI/2; band.position.y=0.04; g.add(band);
-      const bell=new T.Mesh(new T.SphereGeometry(0.035,10,8),new T.MeshStandardMaterial({color:0xf2c04a,metalness:0.6,roughness:0.25})); bell.position.set(0,0.38,0.27); g.add(bell); }
-    { const g=mk(), sh=new T.MeshStandardMaterial({color:0xf2f4f6,roughness:0.18,metalness:0.1});   // ski helmet
-      const top=new T.Mesh(new T.SphereGeometry(0.135,20,12,0,Math.PI*2,0,Math.PI*0.55),sh); top.scale.set(1,1.05,1.1); top.position.y=0.01; g.add(top);
-      const stripe=new T.Mesh(new T.TorusGeometry(0.11,0.012,6,24,Math.PI),new T.MeshStandardMaterial({color:0xef6a2e,roughness:0.4})); stripe.rotation.set(0,Math.PI/2,0); stripe.position.y=0.03; g.add(stripe); }
-    avatar.userData.hats=hats;
+    const face=new T.Group(); face.rotation.y=Math.PI; head.add(face); makeFace(face); const hw=makeHeadwear(face); avatar.userData.hats=hw.hats; avatar.userData.hair=hw.hair; HEADS.push(hw);
     avatar.traverse(o=>{ if (o.isMesh){ o.castShadow=true; o.receiveShadow=true; } }); }
   addPile(tob,0,0.012,-1.52,0.42,0.06,0.16,-0.2,201);   // hard-packed snow in the bottom of the front curl
   for (const sx of [-1,1]){ addPile(deck,sx*0.1,0.105,-1.31,0.11,0.035,0.09,0.3,215+sx); piles[piles.length-1].boot={sx}; }   // caked on the toes
@@ -2878,6 +2925,228 @@ function renderGarage(){
     btn.addEventListener('click',()=>{ if (own){ pickSled(s.id); renderGarage(); return; } if ((prog.bank||0)<s.price) return; prog.bank-=s.price; prog.owned.push(s.id); saveProg(); initAudio(); sfx('fanfare'); pickSled(s.id); renderGarage(); });
     r.appendChild(btn); sp.appendChild(r); } }
 function backToTitle(){ state='title'; setStep(1); $('over').hidden=true; $('pause').hidden=true; $('hud').hidden=true; $('title').hidden=false; renderPickers(); }
+/* ---------------- the dressing room: your rider by the outdoor fireplace of a mountain chalet, snow coming down ---------------- */
+const DRESS={ok:false,pos:new T.Vector3(6000,0,-6000)};
+function buildDress(){ if (DRESS.ok||DRESS.failed) return; DRESS.ok=true; try { buildDressInner(); } catch(e){ console.error('dressing room',e); DRESS.failed=true; DRESS.ok=false; if (DRESS.g) DRESS.g.visible=false; } }
+function buildDressInner(){
+  const g=new T.Group(); g.position.copy(DRESS.pos); scene.add(g); DRESS.g=g;
+  const std=(o)=>new T.MeshStandardMaterial(Object.assign({roughness:0.85},o));
+  // ground and a few soft drifts
+  const sm=std({map:SNOWTEX.map,normalMap:SNOWTEX.nrm,color:0xf4f7fb,roughness:0.9}); sm.map=SNOWTEX.map.clone(); sm.map.repeat.set(10,10); sm.map.needsUpdate=true;
+  const ground=new T.Mesh(new T.CircleGeometry(80,48),sm); ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; g.add(ground);
+  for (const [x,z,r] of [[-3.4,-2.2,1.6],[4.6,-3.2,1.9],[-5.5,1.2,1.4],[2.6,3.4,1],[-1.6,-5.8,2.2]]){ const d=new T.Mesh(new T.SphereGeometry(r,20,12),sm); d.scale.set(1,0.28,0.8); d.position.set(x,-r*0.05,z); d.receiveShadow=true; g.add(d); }
+  // the chalet: log walls, a warm glowing window, a door, and a deep snow-loaded roof with icicles
+  const logM=std({color:0x8a5a36,map:BARKTEX.map,normalMap:BARKTEX.nrm,roughness:0.88}), endM=std({color:0xc49a68,roughness:0.8});
+  const ch=new T.Group(); ch.position.set(-0.6,0,-4.6); g.add(ch);
+  for (let k=0;k<11;k++){ const lg=new T.Mesh(new T.CylinderGeometry(0.15,0.15,8.4,14),logM); lg.rotation.z=Math.PI/2; lg.position.set(0,0.15+k*0.27,0); lg.castShadow=lg.receiveShadow=true; ch.add(lg);
+    for (const sx of [-1,1]){ const e=new T.Mesh(new T.CylinderGeometry(0.15,0.15,0.02,14),endM); e.rotation.z=Math.PI/2; e.position.set(sx*4.21,0.15+k*0.27,0); ch.add(e); } }
+  const glowM=new T.MeshBasicMaterial({color:new T.Color(2.4,1.5,0.62)}), frameM=std({color:0x3b2416,roughness:0.7});
+  for (const wx of [-2.2,1.9]){ const win=new T.Mesh(new T.PlaneGeometry(1.5,1.2),glowM); win.position.set(wx,1.5,0.16); ch.add(win);
+    const fr=new T.Mesh(new T.BoxGeometry(1.66,0.1,0.12),frameM); for (const y of [0.9,2.1,1.5]){ const f=fr.clone(); f.position.set(wx,y,0.2); if (y===1.5) f.scale.set(1,0.6,1); ch.add(f); }
+    for (const dx of [-0.79,0,0.79]){ const f=new T.Mesh(new T.BoxGeometry(0.08,1.3,0.12),frameM); f.position.set(wx+dx,1.5,0.2); ch.add(f); }
+    const sill=new T.Mesh(new T.BoxGeometry(1.8,0.1,0.3),std({color:0xf4f7fb})); sill.position.set(wx,0.86,0.3); ch.add(sill);
+    const wl=new T.PointLight(0xffb066,0.9,6,1.6); wl.position.set(wx,1.5,1.0); ch.add(wl); }
+  const door=new T.Mesh(new T.BoxGeometry(1.1,2.2,0.1),std({color:0x5a3520,map:BARKTEX.map,roughness:0.75})); door.position.set(0,1.1,0.18); ch.add(door);
+  const knob=new T.Mesh(new T.SphereGeometry(0.04,10,8),std({color:0xd9a51e,metalness:0.7,roughness:0.3})); knob.position.set(0.4,1.05,0.25); ch.add(knob);
+  const wreath=new T.Mesh(new T.TorusGeometry(0.22,0.07,8,20),std({color:0x1f5c2e})); wreath.position.set(0,1.72,0.26); ch.add(wreath);
+  const bow=new T.Mesh(new T.SphereGeometry(0.06,8,6),std({color:0xb5161e})); bow.position.set(0,1.52,0.3); ch.add(bow); DRESS.wreath=[wreath,bow];
+  const roofM=std({color:0x3a2a20,roughness:0.8});
+  for (const sx of [-1,1]){ const r=new T.Mesh(new T.BoxGeometry(4.7,0.18,4.2),roofM); r.position.set(sx*2.15,3.95,0.1); r.rotation.z=sx*-0.52; r.castShadow=true; ch.add(r);
+    const sn=new T.Mesh(new T.BoxGeometry(4.75,0.34,4.3),sm); sn.position.set(sx*2.17,4.16,0.1); sn.rotation.z=sx*-0.52; sn.castShadow=true; ch.add(sn); }
+  const gable=new T.Mesh(new T.CylinderGeometry(0,4.2,1.9,3,1),logM); gable.rotation.set(0,Math.PI/2,0); gable.scale.set(0.05,1,1); gable.position.set(0,3.9,0.05); ch.add(gable);
+  const icM=std({color:0xdfefff,roughness:0.15,metalness:0.1,transparent:true,opacity:0.85});
+  for (let k=0;k<26;k++){ const x=-4.1+k*0.33+rr(-0.08,0.08), len=rr(0.12,0.42); const ic=new T.Mesh(new T.ConeGeometry(0.03,len,6),icM); ic.rotation.x=Math.PI; ic.position.set(x,2.92-Math.abs(x)*0.53*0-len/2+0.02,2.2); ch.add(ic); }
+  // the outdoor stone fireplace with a log fire
+  // a real brick fireplace: running-bond brick with recessed mortar, a soldier course over the firebox, a stone mantel and hearth
+  const fp=new T.Group(); fp.position.set(2.15,0,-2.7); fp.rotation.y=-0.42; g.add(fp); DRESS.fp=fp;
+  const rnd=mulberry(91), B=brickTextures();
+  const brickM=std({map:B.map,normalMap:B.nrm,normalScale:new T.Vector2(1.1,1.1),roughness:0.9});
+  const sootM=std({map:B.map,normalMap:B.nrm,color:0x3b2b25,roughness:0.95});
+  const soldierM=std({map:B.soldier,normalMap:B.soldierN,roughness:0.9});
+  const slabM=std({color:0xbdb3a2,map:ROCKTEX.map,normalMap:ROCKTEX.nrm,normalScale:new T.Vector2(0.35,0.35),roughness:0.78});
+  const box=(w,h,d,x,y,z,mat)=>{ const geo=new T.BoxGeometry(w,h,d); worldUV(geo,x,y,z); const m=new T.Mesh(geo,mat); m.position.set(x,y,z); m.castShadow=m.receiveShadow=true; fp.add(m); return m; };
+  box(0.42,1.0,0.7,-0.61,0.5,0,brickM); box(0.42,1.0,0.7,0.61,0.5,0,brickM);    // the two piers either side of the firebox
+  box(0.8,0.17,0.7,0,0.085,0,brickM);                                         // under the firebox
+  box(0.8,0.2,0.7,0,0.9,0,brickM); box(0.84,0.11,0.06,0,0.79,0.33,soldierM);  // above it, with a soldier course of upright bricks
+  box(0.8,0.62,0.1,0,0.48,-0.3,sootM); box(0.8,0.02,0.6,0,0.175,0,sootM);     // sooty back and floor of the firebox
+  box(1.78,0.09,0.82,0,1.045,0.02,slabM);                                     // stone mantel
+  box(0.94,2.25,0.52,0,2.2,-0.06,brickM);                                     // chimney
+  box(1.06,0.1,0.64,0,3.37,-0.06,slabM); box(0.5,0.18,0.3,0,3.5,-0.06,sootM); // cap and flue
+  box(1.9,0.07,0.55,0,0.035,0.6,slabM);                                       // hearth stone out front
+  const snowM=std({color:0xf6f9fc,roughness:0.9});
+  for (const [w,d,y,z] of [[1.74,0.78,1.105,0.02],[1.02,0.6,3.44,-0.06]]){ const sn=new T.Mesh(new T.BoxGeometry(w,0.045,d),snowM); sn.position.set(0,y,z); sn.geometry.translate(0,0,0); fp.add(sn); }
+  const soot=new T.Mesh(new T.PlaneGeometry(0.9,0.5),new T.MeshBasicMaterial({map:(()=>{ const c=canvas(64,64), x=c.getContext('2d'), gr=x.createLinearGradient(0,64,0,0); gr.addColorStop(0,'rgba(10,8,7,0.65)'); gr.addColorStop(1,'rgba(10,8,7,0)'); x.fillStyle=gr; x.fillRect(0,0,64,64); return tex(c); })(),transparent:true,depthWrite:false}));
+  soot.position.set(0,1.0,0.352); fp.add(soot);   // smoke staining above the opening
+  const logD=std({color:0x3a2416,map:BARKTEX.map,roughness:0.9});
+  for (const [rz,ry,x] of [[0.2,0.5,-0.08],[-0.2,-0.5,0.08],[0.05,0,0]]){ const l=new T.Mesh(new T.CylinderGeometry(0.055,0.06,0.62,10),logD); l.rotation.set(Math.PI/2,ry,rz); l.position.set(x,0.33,0.12); fp.add(l); }
+  // soft flames: tall glowing tongues that flicker, deep orange outside and yellow at the heart
+  const FL=(()=>{ const c=canvas(64,128), x=c.getContext('2d'), gr=x.createRadialGradient(32,96,2,32,80,60); gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(0.35,'rgba(255,255,255,0.75)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=gr; x.beginPath(); x.moveTo(32,4); x.bezierCurveTo(52,40,62,80,52,108); x.quadraticCurveTo(32,128,12,108); x.bezierCurveTo(2,80,12,40,32,4); x.fill(); return tex(c); })();
+  DRESS.flames=[]; for (const [x,w,h,c] of [[-0.13,0.2,0.36,[1.0,0.32,0.06]],[0.12,0.2,0.32,[1.0,0.36,0.07]],[0,0.26,0.46,[1.0,0.45,0.1]],[-0.02,0.16,0.28,[1.0,0.78,0.3]],[0.05,0.12,0.2,[1.0,0.92,0.6]]]){
+    const f=new T.Sprite(new T.SpriteMaterial({map:FL,color:new T.Color(...c),transparent:true,opacity:0.68,blending:T.AdditiveBlending,depthWrite:false})); f.position.set(x,0.3+h/2,0.14); fp.add(f); DRESS.flames.push({f,w,h,ph:rnd()*6}); }
+  const glow=new T.Sprite(new T.SpriteMaterial({map:DOT,color:new T.Color(1,0.5,0.18),blending:T.AdditiveBlending,depthWrite:false,transparent:true,opacity:0.7})); glow.scale.set(1.6,1.6,1); glow.position.set(0,0.55,0.3); fp.add(glow); DRESS.glow=glow;
+  const fl=new T.PointLight(0xff8a3a,2.4,9,1.4); fl.position.set(0,0.75,0.7); fp.add(fl); DRESS.fireLight=fl;
+  const stack=new T.Group(); stack.position.set(1.3,0,0.1); fp.add(stack);   // firewood stacked beside it
+  for (let r=0;r<3;r++) for (let k=0;k<3-r;k++){ const l=new T.Mesh(new T.CylinderGeometry(0.07,0.07,0.55,10),logM); l.rotation.x=Math.PI/2; l.position.set(-0.15+k*0.15+r*0.075,0.07+r*0.13,0); l.castShadow=true; stack.add(l); }
+  // pines around the clearing
+  const spots=[[-6.5,-6],[-8.2,-2.5],[6.5,-6.5],[8.4,-2],[-10,-9],[10.5,-9.5],[-4,-10.5],[4.4,-11],[0,-13],[-12,-4],[12.5,-4.5]];
+  const parts=[[PINE.wood,OBJ_MAT],[PINE.needles,NEEDLE_MAT],[PINE.snow,BSNOW_MAT],[PINE.core,CORE_MAT]], m4=new T.Matrix4(), q=new T.Quaternion(), sc=new T.Vector3(), ps=new T.Vector3();
+  for (const [geo,mat] of parts){ const im=new T.InstancedMesh(geo,mat,spots.length); spots.forEach(([x,z],k)=>{ const s1=1.1+((k*37)%10)/14; q.setFromAxisAngle(UP,k*1.7); sc.set(s1,s1,s1); ps.set(x,-0.25,z); m4.compose(ps,q,sc); im.setMatrixAt(k,m4); }); im.castShadow=mat!==BSNOW_MAT; im.receiveShadow=true; if (mat===NEEDLE_MAT) im.customDepthMaterial=NEEDLE_DEPTH; g.add(im); }
+  // big snowy peaks far behind
+  const pk=std({color:0xe8eef6,roughness:0.95,flatShading:true});
+  for (const [x,z,h,r] of [[-40,-90,48,40],[10,-110,62,48],[55,-95,44,38],[-80,-120,58,46]]){ const m=new T.Mesh(new T.ConeGeometry(r,h,7,3),pk); m.position.set(x,h/2-2,z); g.add(m); }
+  // falling snow just for this scene
+  const N=1600, sp=new Float32Array(N*3); for (let k=0;k<N;k++){ sp[k*3]=rr(-7,7); sp[k*3+1]=rr(0,6); sp[k*3+2]=rr(-5,6); }
+  const sg=new T.BufferGeometry(); sg.setAttribute('position',new T.BufferAttribute(sp,3));
+  const snow=new T.Points(sg,new T.PointsMaterial({map:DOT,size:0.055,transparent:true,depthWrite:false,color:0xffffff,opacity:0.95})); snow.frustumCulled=false; g.add(snow); DRESS.snow=snow;
+  // embers rising from the fire
+  const NE=40, ep=new Float32Array(NE*3); DRESS.emb=[]; for (let k=0;k<NE;k++){ DRESS.emb.push({t:rnd()*2}); }
+  const eg=new T.BufferGeometry(); eg.setAttribute('position',new T.BufferAttribute(ep,3));
+  DRESS.embers=new T.Points(eg,new T.PointsMaterial({map:DOT,size:0.05,color:new T.Color(3,1.2,0.3),transparent:true,depthWrite:false,blending:T.AdditiveBlending})); DRESS.embers.frustumCulled=false; fp.add(DRESS.embers);
+  buildFigure(g); applyOutfit(); }
+// your rider, standing: same jacket, pants, boots and mittens as the one on the sled
+/* ---------------- a natural-looking person ----------------
+   Instead of snapping tubes and balls together, the body is one continuous surface: soft shapes for the head, jaw,
+   nose, neck, shoulders, chest, arms, hands and legs are blended into each other like sculpted clay (a signed-distance
+   field turned into a mesh with surface nets). Clothing is painted onto that surface by region, so it recolours instantly. */
+const SDF={
+  ell(x,y,z,cx,cy,cz,rx,ry,rz){ const px=(x-cx)/rx, py=(y-cy)/ry, pz=(z-cz)/rz, k0=Math.sqrt(px*px+py*py+pz*pz), k1=Math.sqrt(px*px/(rx*rx)+py*py/(ry*ry)+pz*pz/(rz*rz)); return k1<1e-9?-Math.min(rx,ry,rz):k0*(k0-1)/k1; },
+  cone(x,y,z,a,b,ra,rb){ const bx=b[0]-a[0], by=b[1]-a[1], bz=b[2]-a[2], px=x-a[0], py=y-a[1], pz=z-a[2], t=Math.max(0,Math.min(1,(px*bx+py*by+pz*bz)/(bx*bx+by*by+bz*bz))); const dx=px-bx*t, dy=py-by*t, dz=pz-bz*t; return Math.sqrt(dx*dx+dy*dy+dz*dz)-(ra+(rb-ra)*t); },
+  smin(a,b,k){ const h=Math.max(0,Math.min(1,0.5+0.5*(b-a)/k)); return b+(a-b)*h-k*h*(1-h); },
+  smax(a,b,k){ return -SDF.smin(-a,-b,k); } };
+function personParts(girl){
+  const P=[], add=(reg,k,f)=>P.push({reg,k,f}), E=SDF.ell, C=SDF.cone;
+  const W=girl?0.93:1, sh=girl?0.19:0.205, addH=(reg,k,f)=>P.push({reg,k,f,h:true});   // addH: part of the head, which is scaled up and raised as one
+  const quilt=(y,d)=>d-0.0038*(0.5+0.5*Math.cos(y*Math.PI*2/0.075));   // puffer-jacket baffles
+  for (const s of [-1,1]){
+    add('boots',0.02,(x,y,z)=>E(x,y,z,s*0.1,0.055,0.045,0.064,0.058,0.13));
+    add('boots',0.03,(x,y,z)=>C(x,y,z,[s*0.1,0.05,0],[s*0.1,0.25,0],0.074,0.072));
+    add('fur',0.015,(x,y,z)=>C(x,y,z,[s*0.1,0.245,0],[s*0.1,0.265,0],0.086,0.086));
+    add('pants',0.04,(x,y,z)=>C(x,y,z,[s*0.1,0.24,0],[s*0.104,0.5,0.015],0.074,0.08));
+    add('pants',0.025,(x,y,z)=>C(x,y,z,[s*0.104,0.5,0.015],[s*0.094*W+0.003,0.84,0],0.08,0.09*W));
+    const shp=[s*sh,1.37,-0.005], el=[s*0.265*W,1.1,0.05], wr=[s*0.21,0.97,0.21];
+    add('jacket',0.035,(x,y,z)=>quilt(y,C(x,y,z,shp,el,0.072,0.062)));
+    add('jacket',0.03,(x,y,z)=>quilt(y,C(x,y,z,el,wr,0.062,0.052)));
+    add('cuff',0.012,(x,y,z)=>C(x,y,z,[wr[0]*0.99,wr[1]+0.005,wr[2]-0.015],[wr[0],wr[1]-0.004,wr[2]+0.012],0.052,0.052));
+    const dx=0, dy=-0.25, dz=0.97, hx=wr[0]+dx*0.07, hy=wr[1]+dy*0.07, hz=wr[2]+dz*0.07;
+    add('mitts',0.03,(x,y,z)=>E(x,y,z,hx,hy,hz,0.046,0.04,0.068));
+    add('mitts',0.015,(x,y,z)=>C(x,y,z,[hx-s*0.035,hy+0.005,hz-0.02],[hx-s*0.05,hy+0.01,hz+0.03],0.019,0.016));
+    addH('skin',0.012,(x,y,z)=>E(x,y,z,s*0.087,1.615,0.002,0.013,0.027,0.018));   // ears
+  }
+  add('pants',0.03,(x,y,z)=>E(x,y,z,0,0.9,-0.005,0.15*W,0.1,0.11));
+  add('jacket',0.05,(x,y,z)=>quilt(y,C(x,y,z,[0,0.9,0],[0,1.13,0.0],0.163*W,0.152*W)));
+  add('jacket',0.05,(x,y,z)=>quilt(y,E(x,y,z,0,1.265,0.014,0.195*W,0.165,girl?0.135:0.13)));
+  add('jacket',0.045,(x,y,z)=>quilt(y,C(x,y,z,[-sh,1.37,-0.005],[sh,1.37,-0.005],0.08,0.08)));
+  add('jacket',0.03,(x,y,z)=>C(x,y,z,[0,0.8,-0.004],[0,0.98,0],0.198*W,0.18*W));   // the jacket hangs straight to the hips
+  add('scarf',0.025,(x,y,z)=>{ const r=Math.hypot(x,z-0.005)-0.08, yy=y-1.462; return Math.hypot(r,yy*1.05)-0.044; });
+  add('scarf',0.02,(x,y,z)=>C(x,y,z,[0.055,1.41,0.09],[0.075,1.2,0.14],0.032,0.03));
+  add('skin',0.03,(x,y,z)=>C(x,y,z,[0,1.42,0.0],[0,1.54,0.012],0.056,0.058));     // neck
+  addH('skin',0.05,(x,y,z)=>E(x,y,z,0,1.626,0.008,girl?0.094:0.097,0.104,0.1));   // a big round head
+  addH('skin',0.05,(x,y,z)=>E(x,y,z,0,1.585,0.024,girl?0.08:0.084,0.05,0.078));    // soft round chin
+  addH('skin',0.03,(x,y,z)=>E(x,y,z,0,1.592,0.05,0.078,0.04,0.058));                 // chubby cheeks
+  addH('skin',0.01,(x,y,z)=>E(x,y,z,0,1.6,0.106,0.0145,0.013,0.012));            // button nose
+  // hair: a close crop for him; longer hair and two braids for her
+  if (girl){ addH('hair',0.02,(x,y,z)=>SDF.smax(E(x,y,z,0,1.637,-0.008,0.096,0.122,0.106),(z-0.035)+(1.66-y)*0.9,0.02));
+    addH('hair',0.02,(x,y,z)=>E(x,y,z,0,1.52,-0.05,0.09,0.11,0.06));
+    for (const s of [-1,1]){ addH('hair',0.025,(x,y,z)=>C(x,y,z,[s*0.085,1.6,-0.02],[s*0.105,1.44,0.04],0.03,0.027)); addH('hair',0.02,(x,y,z)=>C(x,y,z,[s*0.105,1.44,0.04],[s*0.12,1.29,0.085],0.027,0.022)); addH('tie',0.006,(x,y,z)=>C(x,y,z,[s*0.12,1.3,0.084],[s*0.121,1.285,0.087],0.025,0.025)); } }
+  else addH('hair',0.015,(x,y,z)=>SDF.smax(E(x,y,z,0,1.64,-0.004,0.093,0.118,0.102),(z-0.05)+(1.672-y)*1.1,0.015));
+  return P; }
+const HS=1.78, HCY=1.6, HCZ=0.03, HOFF=-0.27, BY=0.76, BX=1.06;   // head scale, centre and lift; the body is squashed short and a little chunkier
+const hX=x=>x/HS, hY=y=>HCY+(y-HCY-HOFF)/HS, hZ=z=>HCZ+(z-HCZ)/HS;           // world -> head-model space
+const hWy=y=>HCY+(y-HCY)*HS+HOFF, hWz=z=>HCZ+(z-HCZ)*HS;                     // head-model -> world
+function personSDF(parts,x,y,z){ let d=1e9; const ax=hX(x), ay=hY(y), az=hZ(z), bx=x/BX, by=y/BY;
+  for (const q of parts){ const v=q.h?q.f(ax,ay,az)*HS:q.f(bx,by,z)*BY; d=d>9e8?v:SDF.smin(d,v,q.k); }
+  return d; }
+function personRegion(parts,x,y,z){ let best=1e9, reg='skin'; const ax=hX(x), ay=hY(y), az=hZ(z), bx=x/BX, by=y/BY; for (const q of parts){ const v=q.h?q.f(ax,ay,az)*HS:q.f(bx,by,z)*BY; if (v<best){ best=v; reg=q.reg; } } return reg; }
+function surfaceNets(f,bx0,by0,bz0,bx1,by1,bz1,h){
+  const nx=Math.ceil((bx1-bx0)/h)+1, ny=Math.ceil((by1-by0)/h)+1, nz=Math.ceil((bz1-bz0)/h)+1, F=new Float32Array(nx*ny*nz), id=(i,j,k)=>i+nx*(j+ny*k);
+  for (let k=0;k<nz;k++) for (let j=0;j<ny;j++) for (let i=0;i<nx;i++) F[id(i,j,k)]=f(bx0+i*h,by0+j*h,bz0+k*h);
+  const V=new Int32Array(nx*ny*nz).fill(-1), pos=[], idx=[], E=[[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]];
+  const co=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]], v8=new Float32Array(8);
+  for (let k=0;k<nz-1;k++) for (let j=0;j<ny-1;j++) for (let i=0;i<nx-1;i++){
+    let m=0; for (let c=0;c<8;c++){ v8[c]=F[id(i+co[c][0],j+co[c][1],k+co[c][2])]; if (v8[c]<0) m|=1<<c; } if (m===0||m===255) continue;
+    let sx=0,sy=0,sz=0,n=0; for (const [a,b] of E){ if ((v8[a]<0)===(v8[b]<0)) continue; const t=v8[a]/(v8[a]-v8[b]); sx+=co[a][0]+(co[b][0]-co[a][0])*t; sy+=co[a][1]+(co[b][1]-co[a][1])*t; sz+=co[a][2]+(co[b][2]-co[a][2])*t; n++; }
+    V[id(i,j,k)]=pos.length/3; pos.push(bx0+(i+sx/n)*h,by0+(j+sy/n)*h,bz0+(k+sz/n)*h); }
+  for (let k=1;k<nz-1;k++) for (let j=1;j<ny-1;j++) for (let i=1;i<nx-1;i++){ const a=F[id(i,j,k)]<0;
+    if (a!==(F[id(i+1,j,k)]<0)){ const q=[V[id(i,j,k)],V[id(i,j-1,k)],V[id(i,j-1,k-1)],V[id(i,j,k-1)]]; if (q.every(v=>v>=0)) a?idx.push(q[0],q[1],q[2],q[0],q[2],q[3]):idx.push(q[0],q[2],q[1],q[0],q[3],q[2]); }
+    if (a!==(F[id(i,j+1,k)]<0)){ const q=[V[id(i,j,k)],V[id(i,j,k-1)],V[id(i-1,j,k-1)],V[id(i-1,j,k)]]; if (q.every(v=>v>=0)) a?idx.push(q[0],q[1],q[2],q[0],q[2],q[3]):idx.push(q[0],q[2],q[1],q[0],q[3],q[2]); }
+    if (a!==(F[id(i,j,k+1)]<0)){ const q=[V[id(i,j,k)],V[id(i-1,j,k)],V[id(i-1,j-1,k)],V[id(i,j-1,k)]]; if (q.every(v=>v>=0)) a?idx.push(q[0],q[1],q[2],q[0],q[2],q[3]):idx.push(q[0],q[2],q[1],q[0],q[3],q[2]); } }
+  return {pos,idx}; }
+const PERSON={};
+function makePerson(girl){ const key=girl?'girl':'boy'; if (PERSON[key]) return PERSON[key];
+  const parts=personParts(girl), f=(x,y,z)=>personSDF(parts,x,y,z), {pos,idx}=surfaceNets(f,-0.4,0,-0.3,0.4,1.7,0.36,0.0115);
+  const n=pos.length/3, nor=new Float32Array(n*3), regs=new Array(n), e=0.004;
+  for (let v=0;v<n;v++){ const x=pos[v*3],y=pos[v*3+1],z=pos[v*3+2]; let gx=f(x+e,y,z)-f(x-e,y,z), gy=f(x,y+e,z)-f(x,y-e,z), gz=f(x,y,z+e)-f(x,y,z-e); const L=Math.hypot(gx,gy,gz)||1; nor[v*3]=gx/L; nor[v*3+1]=gy/L; nor[v*3+2]=gz/L; regs[v]=personRegion(parts,x,y,z); }
+  const g=new T.BufferGeometry(); g.setAttribute('position',new T.Float32BufferAttribute(pos,3)); g.setAttribute('normal',new T.BufferAttribute(nor,3)); g.setAttribute('color',new T.BufferAttribute(new Float32Array(n*3),3)); g.setIndex(idx);
+  const m=new T.Mesh(g,new T.MeshStandardMaterial({vertexColors:true,roughness:0.55,metalness:0})); m.castShadow=true; m.receiveShadow=true;
+  // eyes sit in their sockets: white, a brown iris, a pupil and a catch-light
+  // friendly cartoon face: glossy dot eyes with a catch-light, little brows, a smile
+  const ink=new T.MeshBasicMaterial({color:0x140c08}), shine=new T.MeshBasicMaterial({color:0xffffff}), browM=new T.MeshStandardMaterial({color:0x3e2616,roughness:0.7});
+  // sit each feature right on the skin: march in from the front to the surface and face along the surface normal
+  const place=(o,x,y,z,inset=0.0015)=>{ const wx=x*HS, wy=hWy(y); let wz=0.4; while (wz>-0.1 && f(wx,wy,wz)>0) wz-=0.0015;
+    const e2=0.003, nx=f(wx+e2,wy,wz)-f(wx-e2,wy,wz), ny=f(wx,wy+e2,wz)-f(wx,wy-e2,wz), nz=f(wx,wy,wz+e2)-f(wx,wy,wz-e2), L=Math.hypot(nx,ny,nz)||1;
+    o.position.set(wx-nx/L*inset,wy-ny/L*inset,wz-nz/L*inset); o.lookAt(o.position.x+nx/L,o.position.y+ny/L,o.position.z+nz/L); o.scale.multiplyScalar(HS); m.add(o); return o; };
+  for (const s of [-1,1]){
+    const eye=new T.Group(); place(eye,s*0.035,1.622,0,0.003);
+    const dot=new T.Mesh(new T.SphereGeometry(0.0152,20,14),ink); dot.scale.set(0.74,1.3,0.5); eye.add(dot);
+    const hl=new T.Mesh(new T.CircleGeometry(0.0036,12),shine); hl.position.set(0.0032,0.0075,0.0072); eye.add(hl);
+    const hl2=new T.Mesh(new T.CircleGeometry(0.0016,8),shine); hl2.position.set(-0.0032,-0.007,0.0068); eye.add(hl2);
+    const bw=new T.Group(); place(bw,s*0.036,1.655,0,0.0); const bwm=new T.Mesh(new T.TorusGeometry(0.012,0.0026,6,14,Math.PI*0.7),browM); bwm.rotation.z=Math.PI*0.15+s*0.1; bw.add(bwm);
+    if (girl){ for (const k of [0,1]){ const l=new T.Mesh(new T.ConeGeometry(0.0022,0.009,5),ink); l.rotation.z=-s*(0.9+k*0.45); l.position.set(s*(0.0085+k*0.002),0.0085-k*0.003,0.002); eye.add(l); } } }
+  const sm=new T.Group(); place(sm,0,1.584,0,0.0); const smile=new T.Mesh(new T.TorusGeometry(0.02,0.0032,6,18,Math.PI*0.72),new T.MeshStandardMaterial({color:0x6a2e24,roughness:0.6})); smile.rotation.z=Math.PI+Math.PI*0.14; smile.position.y=0.008; sm.add(smile);
+  return PERSON[key]={mesh:m,regs,parts}; }
+const REGION_COL={skin:'#cf8f68',lips:'#b9645c',brow:'#4a2e1a',hair:'#4a2e1a',tie:'#d6457a',fur:'#ece4d6'};
+function paintPerson(P,r){ const c=P.mesh.geometry.attributes.color, col=new T.Color(), M=GEAR.mitts[r.mitts], J=GEAR.jacket[r.jacket], pos=P.mesh.geometry.attributes.position;
+  for (let v=0;v<P.regs.length;v++){ const reg=P.regs[v], x=pos.getX(v), y=pos.getY(v), z=pos.getZ(v);
+    if (reg==='jacket'){ if (J.plaid){ const a=Math.floor((x+1)*18)%2, b=Math.floor((y+1)*18)%2; col.set(a&&b?'#140c0c':a||b?'#5a1214':'#a3161c'); } else col.set(J.c); }
+    else if (reg==='pants') col.set(GEAR.pants[r.pants].c); else if (reg==='boots') col.set(GEAR.boots[r.boots].c);
+    else if (reg==='mitts'||reg==='scarf') col.set(Math.abs(Math.sin((reg==='scarf'?x*60+z*60:y*130)))>0.82?M.b:M.c);
+    else if (reg==='cuff') col.set(M.b); else col.set(REGION_COL[reg]||REGION_COL.skin);
+    if (reg==='skin'){ const blush=Math.max(0,1-Math.hypot(Math.abs(hX(x))-0.055,hY(y)-1.6)/0.02)*(hZ(z)>0.06?1:0); col.lerp(_blush,Math.min(0.55,blush*0.8)); }
+    col.convertSRGBToLinear(); c.setXYZ(v,col.r,col.g,col.b); }
+  c.needsUpdate=true; }
+const _blush=new T.Color('#f07a78');
+// smooth, lathed hats that sit properly on the head
+function makePersonHats(){ const hats=[], H=1.668, lathe=(pts,mat)=>{ const m=new T.Mesh(new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(r,y)),40),mat); m.castShadow=true; return m; };
+  const add=()=>{ const g=new T.Group(); g.position.set(0,hWy(H),hWz(0.008)-0.008); g.scale.setScalar(HS); hats.push(g); return g; };
+  { const g=add(), K=knitTexturesC('#b5161e','#efe5d0'), knit=new T.MeshStandardMaterial({map:K.map,roughness:0.92}), rib=new T.MeshStandardMaterial({map:K.rib,roughness:0.95});
+    g.add(lathe([[0.104,-0.012],[0.108,0.0],[0.109,0.035],[0.104,0.045]],rib)); g.add(lathe([[0.1,0.04],[0.096,0.07],[0.082,0.1],[0.055,0.122],[0.02,0.132],[0.0,0.133]],knit));
+    const pom=new T.Mesh(new T.IcosahedronGeometry(0.038,2),new T.MeshStandardMaterial({color:0xf4f0e8,roughness:1})); pom.position.y=0.15; g.add(pom); }
+  { const g=add(), st=(()=>{ const c=canvas(16,64), x=c.getContext('2d'); for (let k=0;k<8;k++){ x.fillStyle=k%2?'#f2f2f2':'#2a5db0'; x.fillRect(0,k*8,16,8); } return tex(c); })();
+    g.add(lathe([[0.104,-0.015],[0.11,0.02],[0.106,0.06],[0.094,0.1],[0.075,0.135],[0.045,0.155],[0.0,0.16]],new T.MeshStandardMaterial({map:st,roughness:0.9}))); }
+  { const g=add(), br=new T.MeshStandardMaterial({color:0x4a2f1c,map:FURT,roughness:0.9}), fu=new T.MeshStandardMaterial({color:0xe9dcc4,map:FURT,roughness:1});
+    g.add(lathe([[0.106,0.0],[0.104,0.05],[0.088,0.095],[0.05,0.125],[0.0,0.13]],br)); const brim=new T.Mesh(new T.TorusGeometry(0.108,0.022,10,30),fu); brim.rotation.x=Math.PI/2; brim.position.y=0.008; g.add(brim);
+    for (const s of [-1,1]){ const flap=new T.Mesh(new T.SphereGeometry(0.05,16,12),fu); flap.scale.set(0.42,1.15,0.85); flap.position.set(s*0.1,-0.05,0.0); g.add(flap); } }
+  { const g=add(), gr=new T.MeshStandardMaterial({color:0x1f7a34,roughness:0.85}), fu=new T.MeshStandardMaterial({color:0xf4f0e8,map:FURT,roughness:1});
+    const cone=new T.Mesh(new T.LatheGeometry([[0.104,0],[0.09,0.08],[0.06,0.18],[0.03,0.3],[0.006,0.4]].map(([r,y])=>new T.Vector2(r,y)),28,0),gr); const p=cone.geometry.attributes.position;
+    for (let k=0;k<p.count;k++){ const y=p.getY(k); p.setZ(k,p.getZ(k)-Math.pow(y/0.4,2)*0.18); p.setY(k,y-Math.pow(y/0.4,3)*0.06); } cone.geometry.computeVertexNormals(); cone.castShadow=true; g.add(cone);
+    const band=new T.Mesh(new T.TorusGeometry(0.106,0.024,10,30),fu); band.rotation.x=Math.PI/2; band.position.y=0.01; g.add(band);
+    const bell=new T.Mesh(new T.SphereGeometry(0.03,12,10),new T.MeshStandardMaterial({color:0xf2c04a,metalness:0.6,roughness:0.25})); bell.position.set(0,0.31,-0.19); g.add(bell); }
+  { const g=add(), sh=new T.MeshStandardMaterial({color:0xf2f4f6,roughness:0.2,metalness:0.1});
+    g.add(lathe([[0.118,-0.035],[0.122,0.02],[0.112,0.07],[0.085,0.115],[0.045,0.138],[0.0,0.142]],sh));
+    const gog=new T.Mesh(new T.TorusGeometry(0.117,0.016,8,30,Math.PI*0.9),new T.MeshStandardMaterial({color:0x1a1d22,roughness:0.4})); gog.rotation.set(Math.PI/2,0,Math.PI*0.05); gog.position.y=0.05; g.add(gog);
+    const lens=new T.Mesh(new T.SphereGeometry(0.05,16,10,0,Math.PI*2,0,Math.PI*0.5),new T.MeshStandardMaterial({color:0xff8a2a,roughness:0.08,metalness:0.6})); lens.scale.set(1.5,0.55,0.45); lens.rotation.x=Math.PI/2; lens.position.set(0,0.055,0.108); g.add(lens); }
+  return hats; }
+function buildFigure(parent){
+  const f=new T.Group(); f.position.set(0.7,0,0.3); f.rotation.y=-0.3; parent.add(f); DRESS.fig=f;
+  const body=new T.Group(); f.add(body); DRESS.body=body; DRESS.people={};
+  for (const gk of ['boy','girl']){ const P=makePerson(gk==='girl'); body.add(P.mesh); DRESS.people[gk]=P; }
+  DRESS.hats=makePersonHats(); for (const h of DRESS.hats) body.add(h);
+  DRESS.torso={scale:{y:1}}; DRESS.torsoL=1; DRESS.head=new T.Object3D();
+  DRESS.fit=r=>{ for (const gk of ['boy','girl']){ const P=DRESS.people[gk]; P.mesh.visible=r.g===gk; if (r.g===gk) paintPerson(P,r); } DRESS.hats.forEach((h,k)=>h.visible=k===r.hat); }; }
+let dressOn=false, dressT=0;
+function updateDress(dt){ if (!dressOn||!DRESS.flames||!DRESS.fig) return; dressT+=dt; const D=DRESS, t=dressT;
+  for (const fl of D.flames){ const k=0.82+0.22*Math.sin(t*9+fl.ph)+0.12*Math.sin(t*23+fl.ph*2); fl.f.scale.set(fl.w*(0.9+0.15*Math.sin(t*7+fl.ph)),fl.h*k,1); fl.f.position.y=0.3+fl.h*k/2; fl.f.position.x+=Math.sin(t*5+fl.ph)*0.0004; }
+  D.fireLight.intensity=2.1+0.5*Math.sin(t*11)+0.3*Math.sin(t*27); D.glow.material.opacity=0.6+0.15*Math.sin(t*13);
+  const sp=D.snow.geometry.attributes.position, a=sp.array;
+  for (let k=0;k<a.length;k+=3){ a[k+1]-=dt*(0.55+((k*7)%10)*0.04); a[k]+=Math.sin(t*0.8+k)*dt*0.12+dt*0.15; if (a[k+1]<0){ a[k+1]=6; a[k]=rr(-7,7); a[k+2]=rr(-5,6); } if (a[k]>7) a[k]-=14; }
+  sp.needsUpdate=true;
+  const ep=D.embers.geometry.attributes.position.array; D.emb.forEach((e,k)=>{ e.t+=dt*(0.6+(k%5)*0.1); if (e.t>2) e.t=0; ep[k*3]=Math.sin(k*3.1+e.t*2)*0.12*e.t; ep[k*3+1]=0.5+e.t*0.9; ep[k*3+2]=0.12+Math.cos(k*1.7+e.t)*0.08; }); D.embers.geometry.attributes.position.needsUpdate=true;
+  // idle: breathing, a slow sway, glancing between you and the fire
+  D.body.position.y=Math.sin(t*1.6)*0.006; D.body.rotation.z=Math.sin(t*0.7)*0.015; D.torso.scale.y=D.torsoL*(1+Math.sin(t*1.6)*0.01);
+  D.head.rotation.y=-0.45+0.45*(0.5+0.5*Math.sin(t*0.35)); D.head.rotation.x=Math.sin(t*0.5)*0.03;
+  D.wreath.forEach(w=>w.visible=themeNow==='christmas'); }
+
 /* ---------------- setup: 1 rider, 2 conditions, 3 sled ---------------- */
 let titleStep=0;
 function riderCfg(){ const d={g:'boy',hat:0,jacket:0,pants:0,boots:0,mitts:0}; prog.rider=Object.assign(d,prog.rider||{}); return prog.rider; }
@@ -2885,7 +3154,9 @@ function applyOutfit(){ const r=riderCfg(); if (!RM.jacket) return;
   const J=GEAR.jacket[r.jacket]; RM.jacket.map=J.plaid?PLAID:RM.jkMap; RM.jacket.color.set(J.plaid?'#ffffff':J.c); RM.jacket.needsUpdate=true;
   RM.pants.color.set(GEAR.pants[r.pants].c); RM.boots.color.set(GEAR.boots[r.boots].c);
   const M=GEAR.mitts[r.mitts], K=knitTexturesC(M.c,M.b); for (const m of RM.mitts){ m.map=K.map; m.bumpMap=K.map; m.needsUpdate=true; } for (const m of RM.cuffs){ m.map=K.rib; m.bumpMap=K.rib; m.needsUpdate=true; }
-  if (avatar){ avatar.userData.hats.forEach((h,k)=>h.visible=k===r.hat); avatar.userData.hair.boy.visible=r.g==='boy'; avatar.userData.hair.girl.visible=r.g==='girl'; avatar.userData.torso.scale.x=avatar.userData.torso.scale.z=r.g==='girl'?0.9:1; } }
+  for (const H of HEADS){ H.hats.forEach((h,k)=>h.visible=k===r.hat); H.hair.boy.visible=r.g==='boy'; H.hair.girl.visible=r.g==='girl'; for (const l of H.head.userData.lashes||[]) l.visible=r.g==='girl'; }
+  if (avatar) avatar.userData.torso.scale.x=avatar.userData.torso.scale.z=r.g==='girl'?0.9:1;
+  if (typeof DRESS!=='undefined'&&DRESS.ok) DRESS.fit(r); }
 function setStep(n){ titleStep=clamp(n,0,2); for (let k=0;k<3;k++) $('step'+k).hidden=k!==titleStep;
   [...$('steps').children].forEach((li,k)=>{ li.classList.toggle('on',k===titleStep); li.classList.toggle('done',k<titleStep); });
   $('backBtn').hidden=titleStep===0; $('nextBtn').hidden=titleStep===2; $('startBtn').hidden=titleStep!==2;
@@ -3081,7 +3352,12 @@ function update(dt){
 // chase view: the rider stays exactly where the first-person eye was, and the camera pulls back behind and above them
 const fpAnchor=new T.Object3D(); scene.add(fpAnchor); let chYaw=0, chOn=false, chPos=new T.Vector3(), chLook=new T.Vector3();
 function chaseCam(dt){
-  const dress=state==='title'&&titleStep!==1&&$('garage').hidden&&$('settings').hidden;   // setup screens: show off the rider and sled
+  const room=state==='title'&&titleStep===0&&$('garage').hidden&&$('settings').hidden;
+  if (room&&!DRESS.failed){ buildDress(); }
+  if (room&&DRESS.ok){ DRESS.g.visible=true; dressOn=true; rig.visible=false; avatar.visible=false; if (rig.parent!==camera){ camera.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
+    const P=DRESS.pos, wide=innerWidth>760; camera.position.set(P.x+(wide?-0.1:0.9),P.y+1.45,P.z+4.4); camera.lookAt(P.x+(wide?-0.7:1.0),P.y+1.08,P.z); camera.fov=wide?40:50; camera.updateProjectionMatrix(); chOn=false; return; }
+  if (dressOn){ dressOn=false; DRESS.g.visible=false; }
+  const dress=false;
   const want=dress||(SETTINGS.chase&&(state==='play'||state==='crash'));
   if (!want){ if (rig.parent!==camera){ camera.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); } avatar.visible=false; chOn=false; return; }
   fpAnchor.position.copy(camera.position); fpAnchor.quaternion.copy(camera.quaternion); fpAnchor.updateMatrixWorld(true);
@@ -3143,12 +3419,13 @@ function updateCamera(dt){
     const n=Math.ceil(Math.abs(st)*speedNow()*0.25*SURF.spray), gy=height(_C.x,_C.z), sd=st>0?1:-1, ox=Math.cos(heading)*sd, oz=-Math.sin(heading)*sd;
     for (let i=0;i<n;i++) emit(_C.x+ox*0.15+rr(-0.1,0.1),gy+0.05,_C.z+rr(-0.1,0.1),vx*0.75+ox*rr(0.5,2),rr(0.6,2.2),vz*0.75+oz*rr(0.5,2),1,0.25,{size:[0.04,0.14],life:[0.3,0.8],g:4,drag:2,kind:1});
     if (R()<0.25) emitChunk(_C.x,gy+0.08,_C.z,vx*0.7+ox,rr(0.5,1.5),vz*0.7+oz,1,0.3,[0.015,0.035]); }
-  chaseCam(dt);
-  const fovT=SETTINGS.fov+Math.min(20,sp*0.75)+tuckAmt*3; fovNow+=(fovT-fovNow)*Math.min(1,dt*3); camera.fov=fovNow; camera.updateProjectionMatrix();
+  chaseCam(dt); updateDress(dt);
+  const fovT=SETTINGS.fov+Math.min(20,sp*0.75)+tuckAmt*3; fovNow+=(fovT-fovNow)*Math.min(1,dt*3); if (!dressOn){ camera.fov=fovNow; camera.updateProjectionMatrix(); }
   sprayMat.uniforms.uScale.value=renderer.getDrawingBufferSize(_sv2).y/(2*Math.tan(camera.fov*Math.PI/360));
   const tx=Math.round(px+fx*25), tz=Math.round(pz+fz*25), ty=Math.round(height(tx,tz));
-  sun.target.position.set(tx,ty,tz); sun.position.set(tx+SUN_DIR.x*260,ty+SUN_DIR.y*260,tz+SUN_DIR.z*260);
-  skyMesh.position.copy(camera.position); mountains.position.set(ex,ey-140,ez);
+  if (dressOn){ const P=DRESS.pos; sun.target.position.copy(P); sun.position.set(P.x+SUN_DIR.x*260,P.y+SUN_DIR.y*260,P.z+SUN_DIR.z*260); mountains.position.set(camera.position.x,-140,camera.position.z); }
+  else { sun.target.position.set(tx,ty,tz); sun.position.set(tx+SUN_DIR.x*260,ty+SUN_DIR.y*260,tz+SUN_DIR.z*260); mountains.position.set(ex,ey-140,ez); }
+  skyMesh.position.copy(camera.position);
 }
 const _sv2=new T.Vector2();
 let last=performance.now();
