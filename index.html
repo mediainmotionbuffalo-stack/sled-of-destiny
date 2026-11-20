@@ -56,7 +56,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 body.touchui .hud-bl{left:50%;right:auto;top:calc(env(safe-area-inset-top,0px) + 10px);bottom:auto;transform:translateX(-50%) scale(.72);transform-origin:top center;}
 body.touchui #combo{bottom:calc(env(safe-area-inset-bottom,0px) + 230px);}
 body.touchui #keys{display:none!important;}
-@media (pointer:coarse){ .screen{overflow:auto;align-items:flex-start;} .card{max-height:none;} }
+
 #chal:empty{display:none;}
 #chal{opacity:.6;transition:opacity .5s ease;font-size:.72rem!important;gap:3px!important;}
 #chal.lit{opacity:1;}
@@ -118,7 +118,23 @@ kbd{display:inline-block;min-width:1.5em;padding:1px 6px;margin:0 2px;border-rad
   padding:calc(env(safe-area-inset-top,0px) + 32px) max(28px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 36px) max(28px,env(safe-area-inset-left,0px));
   background:linear-gradient(180deg,rgba(13,20,28,0) 30%,rgba(13,20,28,.55) 70%,rgba(13,20,28,.82) 100%),linear-gradient(90deg,rgba(13,20,28,.45),rgba(13,20,28,0) 60%);}
 .screen.center{align-items:center;justify-content:center;background:rgba(13,20,28,.5);}
-.card{width:min(600px,100%);display:flex;flex-direction:column;gap:14px;max-height:100%;overflow:auto;}
+.card{width:min(600px,100%);display:flex;flex-direction:column;gap:14px;}
+.screen{overflow-y:auto;overflow-x:hidden;align-items:flex-start;}
+.screen>.card{margin-top:auto;flex:none;}
+.screen.center>.card{margin:auto;}
+.steps{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap;}
+.steps li{display:flex;align-items:center;gap:7px;font:700 .78rem var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:6px 12px 6px 6px;border-radius:999px;border:1px solid var(--glass-line);cursor:pointer;}
+.steps li b{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:rgba(244,247,250,.12);font-size:.72rem;color:var(--snow);}
+.steps li.on{color:var(--snow);border-color:var(--orange);background:rgba(239,106,46,.18);}
+.steps li.on b{background:var(--orange);}
+.steps li.done b{background:rgba(239,106,46,.55);}
+.step{display:flex;flex-direction:column;gap:12px;}
+.gear{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:center;}
+.gear .label{white-space:nowrap;}
+.gear .pick{gap:6px;}
+.chip.sw{flex-direction:row;align-items:center;gap:7px;padding:5px 10px 5px 6px;font-size:.82rem;}
+.chip.sw i{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.25);}
+.row.nav{align-items:center;}
 .screen.center .card{background:var(--glass);border:1px solid var(--glass-line);border-radius:14px;padding:26px 28px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);width:min(460px,100%);}
 .eyebrow{font-family:var(--body);font-weight:600;font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;color:var(--orange);margin:0;}
 h1,h2{font-family:var(--display);font-weight:800;font-style:italic;text-transform:uppercase;margin:0;line-height:.88;letter-spacing:.01em;text-wrap:balance;}
@@ -190,7 +206,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
 .setrow .label{min-width:9.5em;}
 .ctlgrid{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font:500 .84rem var(--body);color:var(--snow);align-items:center;}
 .ctlgrid span:nth-child(odd){white-space:nowrap;}
-.set-card{max-height:calc(100dvh - 32px);overflow:auto;}
+.set-card{}
 .wallet{margin:0;font:600 1rem var(--body);color:var(--muted);} .wallet b{font:700 1.6rem var(--display);color:var(--snow);margin:0 4px;font-variant-numeric:tabular-nums;}
 #gRows{display:flex;flex-direction:column;gap:7px;}
 .garage-card h2{font-size:2.3rem;} .grow{padding:7px 12px!important;} .grow span{font-size:.8rem!important;}
@@ -248,22 +264,24 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
       <p class="eyebrow">Pine forest · alpine bowl · frozen river · village · finish</p>
       <h1>Sled of Destiny</h1>
       <p class="lede">Ride the whole mountain from the pines to the finish line. Chain tricks for points, outrun avalanches and the yeti, and unlock faster, wilder sleds.</p>
-      <div class="pickrow"><span class="label">Sled</span><div class="pick" id="sledPick" role="group" aria-label="Choose a sled"></div><p class="hint" id="sledInfo"></p><div id="sledStats" aria-label="Sled stats"></div></div>
-      <div class="pickrow inline"><span class="label">Time of day</span><div class="pick" id="condPick" role="group" aria-label="Time of day"></div></div>
-      <div class="pickrow inline"><span class="label">Snowfall</span><div class="pick" id="snowPick" role="group" aria-label="Snowfall"></div></div>
-      <div class="pickrow inline"><span class="label">Ground</span><div class="pick" id="surfPick" role="group" aria-label="Snow on the ground"></div></div>
-      <div class="pickrow inline"><span class="label">Theme</span><div class="pick" id="themePick" role="group" aria-label="Theme"></div></div>
-      <ul class="controls">
-        <li><b>Lean</b><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd></li>
-        <li><b>Tuck / push off</b><kbd>↓</kbd> or <kbd>S</kbd>: hold to tuck, tap when stuck</li>
-        <li><b>Brake</b><kbd>Shift</kbd> drags your boots</li>
-        <li><b>Hop</b><kbd>Space</kbd> or <kbd>↑</kbd> over creeks, logs, fences</li>
-        <li><b>In the air</b><kbd>↑</kbd><kbd>↓</kbd> tilt the nose, <kbd>←</kbd><kbd>→</kbd> lean. Match the slope to land.</li>
-        <li><b>Tricks</b>Hold <kbd>Shift</kbd> in the air: <kbd>←</kbd><kbd>→</kbd> spin, <kbd>↑</kbd><kbd>↓</kbd> flip. Hold <kbd>G</kbd> for no hands. On a saucer or tube, <kbd>Shift</kbd> + <kbd>←</kbd><kbd>→</kbd> spins you on the ground.</li>
-        <li><b>Look back</b>Hold <kbd>C</kbd> to check what's chasing you</li>
-        <li><b>Other</b><kbd>P</kbd> pause · <kbd>F</kbd> fullscreen · <kbd>M</kbd> sound · <kbd>N</kbd> music · <kbd>Q</kbd> graphics</li>
-      </ul>
-      <div class="row"><button class="btn" id="startBtn" disabled>Building the hill…</button><button class="btn ghost small" id="garageBtn">🔧 Garage</button><button class="btn ghost small" id="setBtn">⚙ Settings</button><button class="btn ghost small" id="qualBtn2">Graphics: High</button><p class="hint">or press <kbd>Enter</kbd> · gamepad works too</p></div>
+      <ol class="steps" id="steps" aria-label="Setup steps"><li data-s="0"><b>1</b>Rider</li><li data-s="1"><b>2</b>Conditions</li><li data-s="2"><b>3</b>Sled</li></ol>
+      <div class="step" id="step0">
+        <div class="pickrow inline"><span class="label">Rider</span><div class="pick" id="genderPick" role="group" aria-label="Boy or girl"></div></div>
+        <div class="pickrow"><span class="label">Outfits</span><div class="pick" id="outfitPick" role="group" aria-label="Ready-made outfits"></div></div>
+        <div class="gear" id="gearRows"></div>
+      </div>
+      <div class="step" id="step1" hidden>
+        <div class="pickrow inline"><span class="label">Time of day</span><div class="pick" id="condPick" role="group" aria-label="Time of day"></div></div>
+        <div class="pickrow inline"><span class="label">Snowfall</span><div class="pick" id="snowPick" role="group" aria-label="Snowfall"></div></div>
+        <div class="pickrow inline"><span class="label">Ground</span><div class="pick" id="surfPick" role="group" aria-label="Snow on the ground"></div></div>
+        <div class="pickrow inline"><span class="label">Theme</span><div class="pick" id="themePick" role="group" aria-label="Theme"></div></div>
+      </div>
+      <div class="step" id="step2" hidden>
+        <div class="pickrow"><span class="label">Sled</span><div class="pick" id="sledPick" role="group" aria-label="Choose a sled"></div><p class="hint" id="sledInfo"></p><div id="sledStats" aria-label="Sled stats"></div></div>
+        <p class="hint">Controls: arrows or A/D to lean, ↓ to tuck, Space to hop, Shift for tricks and braking. The full list is in ⚙ Settings.</p>
+      </div>
+      <div class="row nav"><button class="btn ghost" id="backBtn" hidden>← Back</button><button class="btn" id="nextBtn">Next: Conditions →</button><button class="btn" id="startBtn" disabled hidden>Building the hill…</button>
+        <button class="btn ghost small" id="garageBtn">🔧 Garage</button><button class="btn ghost small" id="setBtn">⚙ Settings</button><button class="btn ghost small" id="qualBtn2">Graphics: High</button></div>
       <p class="hint" id="bestTitle" hidden></p>
     </div>
   </section>
@@ -712,8 +730,10 @@ function woodGrain(){ const c=canvas(64,512), g=c.getContext('2d'), r=mulberry(4
   for (let i=0;i<46;i++){ const x=r()*64, w=0.6+r()*2.2, a=0.15+r()*0.35; g.strokeStyle=r()<0.5?`rgba(15,7,3,${a})`:`rgba(110,66,36,${a*0.7})`; g.lineWidth=w;
     g.beginPath(); g.moveTo(x,0); for(let y=0;y<=512;y+=32) g.lineTo(x+Math.sin(y*0.02+i)*2.5,y); g.stroke(); }
   return tex(c); }
-function knitTextures(){
-  const N=256, c=canvas(N,N), g=c.getContext('2d'), RED='#9c1f18', CREAM='#efe5d0', S=4;
+const KNIT_C={};
+function knitTexturesC(a,b){ const k=a+b; return KNIT_C[k]||(KNIT_C[k]=knitTextures(a,b)); }
+function knitTextures(RED='#9c1f18',CREAM='#efe5d0'){
+  const N=256, c=canvas(N,N), g=c.getContext('2d'), S=4;
   g.fillStyle=RED; g.fillRect(0,0,N,N);
   const cell=(i,j,col)=>{ g.fillStyle=col; g.fillRect(i*S,j*S,S,S); };
   const band=row0=>{ for(let i=0;i<N/S;i++){ cell(i,row0,CREAM); cell(i,row0+12,CREAM); if(i%2===0){ cell(i,row0+1,CREAM); cell(i,row0+11,CREAM); } }
@@ -722,7 +742,7 @@ function knitTextures(){
   for (let i=0;i<N/S;i+=4) for (let j=24;j<34;j+=4) cell(i+((j/4)%2?2:0),j,CREAM);
   for (let y=0;y<N;y+=S) for (let x=0;x<N;x+=S){ g.strokeStyle='rgba(0,0,0,.28)'; g.lineWidth=0.9; g.beginPath(); g.moveTo(x+0.3,y+0.3); g.lineTo(x+S/2,y+S-0.4); g.lineTo(x+S-0.3,y+0.3); g.stroke(); }
   const rc=canvas(64,64), rg=rc.getContext('2d');
-  for (let x=0;x<64;x+=8){ rg.fillStyle=CREAM; rg.fillRect(x,0,5,64); rg.fillStyle='#d8ccb4'; rg.fillRect(x+5,0,3,64); }
+  for (let x=0;x<64;x+=8){ rg.fillStyle=CREAM; rg.fillRect(x,0,5,64); rg.fillStyle='rgba(0,0,0,.12)'; rg.fillRect(x+5,0,3,64); }
   for (let y=0;y<64;y+=4){ rg.fillStyle='rgba(0,0,0,.12)'; rg.fillRect(0,y,64,1); }
   const rib=tex(rc); rib.repeat.set(4,1); return {map:tex(c),rib};
 }
@@ -1294,6 +1314,22 @@ function updatePiles(){ DUST_U.value=snowLoad;
 
 /* ---------------- first-person rider ---------------- */
 const rig=new T.Group(); camera.add(rig); let avatar=null;
+/* ---------------- what your rider wears ---------------- */
+const RM={mitts:[],cuffs:[]};   // the rider's materials, filled in as the rider is built
+const PLAID=(()=>{ const c=canvas(128,128), g=c.getContext('2d'); g.fillStyle='#a3161c'; g.fillRect(0,0,128,128); g.fillStyle='rgba(15,10,10,.85)';
+  for (let i=0;i<128;i+=32){ g.fillRect(i,0,16,128); g.fillRect(0,i,128,16); } g.fillStyle='rgba(0,0,0,.35)'; for (let i=0;i<128;i+=32) g.fillRect(i,i,16,16);
+  const t=tex(c); t.repeat.set(3,3); return t; })();
+const GEAR={
+  hat:[{n:'Red pom toque',c:'#b5161e'},{n:'Striped beanie',c:'#2a5db0'},{n:'Trapper hat',c:'#6b4a2e'},{n:'Elf hat',c:'#1f7a34'},{n:'Ski helmet',c:'#f2f4f6'}],
+  jacket:[{n:'Navy quilted',c:'#22374f'},{n:'Red puffer',c:'#a3161c'},{n:'Berry pink',c:'#b8336a'},{n:'Forest green',c:'#2c5a36'},{n:'Buffalo plaid',c:'#a3161c',plaid:true}],
+  pants:[{n:'Charcoal',c:'#3a3d43'},{n:'Black',c:'#1b1c20'},{n:'Navy',c:'#24304a'},{n:'Snow white',c:'#d8dde3'},{n:'Ski-patrol red',c:'#8e1a1f'}],
+  boots:[{n:'Brown leather',c:'#5b3b25'},{n:'Black',c:'#1d1d20'},{n:'Tan',c:'#a87b4f'},{n:'Red',c:'#8a1c1c'},{n:'Purple',c:'#5a3a7a'}],
+  mitts:[{n:'Red Nordic',c:'#9c1f18',b:'#efe5d0'},{n:'Blue Nordic',c:'#1f3f8c',b:'#efe5d0'},{n:'Green Nordic',c:'#1f5c34',b:'#efe5d0'},{n:'Pink Nordic',c:'#c93f73',b:'#fbeef3'},{n:'Black & grey',c:'#222326',b:'#9a9da3'}],
+};
+const OUTFITS={
+  boy:[{n:'Classic',o:{hat:0,jacket:0,pants:0,boots:0,mitts:0}},{n:'Lumberjack',o:{hat:2,jacket:4,pants:1,boots:2,mitts:4}},{n:'Racer',o:{hat:4,jacket:1,pants:1,boots:1,mitts:4}},{n:'Elf',o:{hat:3,jacket:3,pants:4,boots:3,mitts:2}},{n:'Arctic',o:{hat:1,jacket:0,pants:3,boots:1,mitts:1}}],
+  girl:[{n:'Classic',o:{hat:0,jacket:1,pants:3,boots:2,mitts:0}},{n:'Snow bunny',o:{hat:1,jacket:2,pants:3,boots:4,mitts:3}},{n:'Lumberjill',o:{hat:2,jacket:4,pants:1,boots:0,mitts:4}},{n:'Racer',o:{hat:4,jacket:2,pants:1,boots:1,mitts:3}},{n:'Elf',o:{hat:3,jacket:3,pants:4,boots:3,mitts:2}}],
+};
 const hands=[], arms=[], ropes=[], bodies={}, legRefs=[], rocketFlames=[]; let deck=null, contact=null;
 // how the rider sits on each sled (deck frame, right leg; mirrored for the left): hip, knee, ankle, and boot tilt
 const LEG_POSE={toboggan:[[0.12,0.17,0.3],[0.14,0.33,-0.5],[0.1,0.19,-1.08],0],
@@ -1318,7 +1354,7 @@ function updateRopes(){ const A=ROPE_A[SLED.form], show=SLED.form==='toboggan'||
 function setSled(id){ SLED=deriveSled(SLEDS.find(s=>s.id===id)||SLEDS[0]); for (const k in bodies) bodies[k].visible=k===SLED.id; if (legRefs.length) poseLegs(); if (contact){ contact.scale.set(SLED.contact[0],1,SLED.contact[1]); } }
 const _sd=new T.Vector3();
 function placeSeg(m,a,b){ _sd.subVectors(b,a); const L=_sd.length(); m.position.copy(a); m.quaternion.setFromUnitVectors(UP,_sd.multiplyScalar(1/L)); m.scale.set(1,L,1); }
-function sleeveGeo(r0,r1,bulge){ const g=new T.CylinderGeometry(r1,r0,1,18,16,true); g.translate(0,0.5,0); const p=g.attributes.position;
+function sleeveGeo(r0,r1,bulge){ const g=new T.CylinderGeometry(r1,r0,1,18,16,false); g.translate(0,0.5,0); const p=g.attributes.position;
   for (let i=0;i<p.count;i++){ const k=1+bulge*Math.abs(Math.sin(p.getY(i)*Math.PI*4)); p.setX(i,p.getX(i)*k); p.setZ(i,p.getZ(i)*k); } g.computeVertexNormals(); return g; }
 function fabricTex(quilt,seed){
   const N=256, c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N), r=mulberry(seed);
@@ -1330,7 +1366,7 @@ function fabricTex(quilt,seed){
   g.putImageData(im,0,0); return {map:tex(c), nrm:tex(normalFromHeight(c,quilt?5:2.5),false)};
 }
 function makeMitten(sx,KN){
-  const m=new T.Group(), knit=new T.MeshStandardMaterial({map:KN.map,bumpMap:KN.map,bumpScale:0.0025,roughness:0.95}); addDust(knit,1.5); const cuffM=new T.MeshStandardMaterial({map:KN.rib,bumpMap:KN.rib,bumpScale:0.003,roughness:0.95});
+  const m=new T.Group(), knit=new T.MeshStandardMaterial({map:KN.map,bumpMap:KN.map,bumpScale:0.0025,roughness:0.95}); addDust(knit,1.5); const cuffM=new T.MeshStandardMaterial({map:KN.rib,bumpMap:KN.rib,bumpScale:0.003,roughness:0.95,side:T.DoubleSide}); RM.mitts.push(knit); RM.cuffs.push(cuffM);
   const palm=new T.Mesh(new T.SphereGeometry(0.075,24,18),knit); palm.scale.set(1.05,0.74,1.4); m.add(palm);
   const thumb=new T.Mesh(new T.SphereGeometry(0.032,16,12),knit); thumb.scale.set(1,1,1.7); thumb.position.set(-sx*0.062,0.012,0.012); thumb.rotation.y=sx*0.5; m.add(thumb);
   const cuff=new T.Mesh(new T.CylinderGeometry(0.056,0.06,0.07,20,1,true),cuffM); cuff.rotation.x=Math.PI/2; cuff.position.set(0,-0.005,0.095); m.add(cuff);
@@ -1342,9 +1378,9 @@ function makeMitten(sx,KN){
   const grain=woodGrain(), KN=knitTextures(), JK=fabricTex(true,41), PN=fabricTex(false,57), LT=fabricTex(false,73);
   const wood=new T.MeshStandardMaterial({color:0x8a5a3a,map:grain,roughness:0.36,metalness:0.04}); addDust(wood,2.5); const woodD=new T.MeshStandardMaterial({color:0x2a170c,roughness:0.5});
   const rope=new T.MeshStandardMaterial({color:0xc9b48a,roughness:0.9});
-  const jacket=new T.MeshStandardMaterial({color:0x22374f,map:JK.map,normalMap:JK.nrm,normalScale:new T.Vector2(0.8,0.8),roughness:0.46,metalness:0.02}); addDust(jacket,2.5);
-  const pants=new T.MeshStandardMaterial({color:0x3a3d43,map:PN.map,normalMap:PN.nrm,roughness:0.85}); addDust(pants,3);
-  const leather=new T.MeshStandardMaterial({color:0x5b3b25,map:LT.map,normalMap:LT.nrm,roughness:0.48}); addDust(leather,2);
+  const jacket=new T.MeshStandardMaterial({color:0x22374f,map:JK.map,normalMap:JK.nrm,normalScale:new T.Vector2(0.8,0.8),roughness:0.46,metalness:0.02,side:T.DoubleSide}); addDust(jacket,2.5); RM.jacket=jacket; RM.jkMap=JK.map;
+  const pants=new T.MeshStandardMaterial({color:0x3a3d43,map:PN.map,normalMap:PN.nrm,roughness:0.85,side:T.DoubleSide}); addDust(pants,3); RM.pants=pants;
+  const leather=new T.MeshStandardMaterial({color:0x5b3b25,map:LT.map,normalMap:LT.nrm,roughness:0.48}); addDust(leather,2); RM.boots=leather;
   const rubber=new T.MeshStandardMaterial({color:0x1a1a1b,roughness:0.85}), lace=new T.MeshStandardMaterial({color:0x2b1f15,roughness:0.9});
   deck=new T.Group();
   const tob=new T.Group(); deck.add(tob); bodies.toboggan=tob;
@@ -1511,14 +1547,45 @@ function makeMitten(sx,KN){
   { avatar=new T.Group(); rig.add(avatar); avatar.visible=false;
     const tg=new T.CylinderGeometry(0.17,0.2,1,18,1); tg.translate(0,0.5,0); const torso=new T.Mesh(tg,jacket); avatar.add(torso); avatar.userData.torso=torso;
     const sh=new T.Mesh(new T.SphereGeometry(0.2,18,12),jacket); sh.scale.set(1.25,0.6,0.9); avatar.add(sh); avatar.userData.sh=sh;
-    const skin=new T.MeshStandardMaterial({color:0xe8b896,roughness:0.6}), knit=new T.MeshStandardMaterial({color:0xb5161e,map:KN.map,roughness:0.9});
+    const skin=new T.MeshStandardMaterial({color:0xe8b896,roughness:0.6});
     const head=new T.Group(); avatar.add(head); avatar.userData.head=head;
     head.add(new T.Mesh(new T.SphereGeometry(0.115,18,14),skin));
     const gog=new T.Mesh(new T.TorusGeometry(0.112,0.03,8,24),new T.MeshStandardMaterial({color:0x1a1d22,roughness:0.3})); gog.rotation.x=Math.PI/2; gog.position.y=0.02; head.add(gog);
-    const lens=new T.Mesh(new T.SphereGeometry(0.06,12,8),new T.MeshStandardMaterial({color:0xff8a2a,roughness:0.1,metalness:0.6})); lens.scale.set(1.6,0.6,0.5); lens.position.set(0,0.02,-0.1); head.add(lens);
-    const hat=new T.Mesh(new T.SphereGeometry(0.122,18,10,0,Math.PI*2,0,Math.PI/2),knit); hat.position.y=0.03; head.add(hat);
-    const cuff=new T.Mesh(new T.CylinderGeometry(0.126,0.126,0.05,18),knit); cuff.position.y=0.04; head.add(cuff);
-    const pom=new T.Mesh(new T.SphereGeometry(0.045,10,8),new T.MeshStandardMaterial({color:0xf4f0e8,roughness:1})); pom.position.y=0.17; head.add(pom);
+    const lens=new T.Mesh(new T.SphereGeometry(0.06,12,8),new T.MeshStandardMaterial({color:0xff8a2a,roughness:0.1,metalness:0.6})); lens.scale.set(1.6,0.6,0.5); lens.position.set(0,0.025,-0.1); head.add(lens);
+    const nose=new T.Mesh(new T.SphereGeometry(0.018,10,8),new T.MeshStandardMaterial({color:0xe9a086,roughness:0.6})); nose.position.set(0,-0.02,-0.113); head.add(nose);
+    const smile=new T.Mesh(new T.TorusGeometry(0.03,0.006,6,12,Math.PI),new T.MeshStandardMaterial({color:0x7a2a22,roughness:0.6})); smile.rotation.set(0,0,Math.PI); smile.position.set(0,-0.05,-0.108); head.add(smile);
+    for (const sx of [-1,1]){ const ch=new T.Mesh(new T.SphereGeometry(0.02,8,6),new T.MeshStandardMaterial({color:0xf0a090,roughness:0.8,transparent:true,opacity:0.7})); ch.position.set(sx*0.06,-0.03,-0.095); head.add(ch); }
+    // hair: a short crop for the boy, long braids for the girl
+    const hairM=new T.MeshStandardMaterial({color:0x4a2e1a,roughness:0.8}); RM.hair=hairM;
+    const boyHair=new T.Group(); head.add(boyHair); { const h=new T.Mesh(new T.SphereGeometry(0.118,16,10,0,Math.PI*2,Math.PI*0.45,Math.PI*0.25),hairM); h.position.set(0,0.01,0.01); boyHair.add(h); }
+    const girlHair=new T.Group(); head.add(girlHair);
+    { const back=new T.Mesh(new T.SphereGeometry(0.122,16,12,0,Math.PI,Math.PI*0.3,Math.PI*0.45),hairM); back.rotation.y=Math.PI/2+Math.PI/2; back.position.z=0.01; girlHair.add(back);
+      for (const sx of [-1,1]){ const pts=[new T.Vector3(sx*0.09,-0.02,0.05),new T.Vector3(sx*0.12,-0.12,0.04),new T.Vector3(sx*0.13,-0.24,0.0),new T.Vector3(sx*0.12,-0.34,-0.04)];
+        girlHair.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),16,0.03,8,false),hairM));
+        const tie=new T.Mesh(new T.SphereGeometry(0.03,8,6),new T.MeshStandardMaterial({color:0xd6457a,roughness:0.5})); tie.position.set(sx*0.12,-0.34,-0.04); girlHair.add(tie); } }
+    avatar.userData.hair={boy:boyHair,girl:girlHair};
+    // five hats
+    const hats=[]; const mk=()=>{ const g=new T.Group(); head.add(g); hats.push(g); return g; };
+    const knitTex=knitTexturesC('#b5161e','#efe5d0');
+    { const g=mk(), knit=new T.MeshStandardMaterial({map:knitTex.map,roughness:0.9});   // red pom toque
+      const top=new T.Mesh(new T.SphereGeometry(0.122,18,10,0,Math.PI*2,0,Math.PI/2),knit); top.position.y=0.03; g.add(top);
+      const cuff=new T.Mesh(new T.CylinderGeometry(0.126,0.126,0.05,18),new T.MeshStandardMaterial({map:knitTex.rib,roughness:0.95})); cuff.position.y=0.04; g.add(cuff);
+      const pom=new T.Mesh(new T.SphereGeometry(0.045,10,8),new T.MeshStandardMaterial({color:0xf4f0e8,roughness:1})); pom.position.y=0.17; g.add(pom); }
+    { const g=mk(), st=(()=>{ const c=canvas(16,64), x=c.getContext('2d'); for (let k=0;k<8;k++){ x.fillStyle=k%2?'#f2f2f2':'#2a5db0'; x.fillRect(0,k*8,16,8); } return tex(c); })();   // striped beanie
+      const top=new T.Mesh(new T.SphereGeometry(0.124,18,12,0,Math.PI*2,0,Math.PI*0.55),new T.MeshStandardMaterial({map:st,roughness:0.9})); top.scale.y=1.15; top.position.y=0.015; g.add(top);
+      const fold=new T.Mesh(new T.TorusGeometry(0.122,0.02,8,24),new T.MeshStandardMaterial({color:0x2a5db0,roughness:0.9})); fold.rotation.x=Math.PI/2; fold.position.y=0.03; g.add(fold); }
+    { const g=mk(), br=new T.MeshStandardMaterial({color:0x6b4a2e,roughness:0.85}), fu=new T.MeshStandardMaterial({color:0xe9dcc4,roughness:1});   // trapper
+      const top=new T.Mesh(new T.SphereGeometry(0.128,18,10,0,Math.PI*2,0,Math.PI/2),br); top.position.y=0.03; g.add(top);
+      const brim=new T.Mesh(new T.TorusGeometry(0.125,0.03,8,24),fu); brim.rotation.x=Math.PI/2; brim.position.y=0.035; g.add(brim);
+      for (const sx of [-1,1]){ const flap=new T.Mesh(new T.SphereGeometry(0.06,12,10),fu); flap.scale.set(0.45,1.2,0.9); flap.position.set(sx*0.12,-0.04,0.01); g.add(flap); } }
+    { const g=mk(), gr=new T.MeshStandardMaterial({color:0x1f7a34,roughness:0.85}), fu=new T.MeshStandardMaterial({color:0xf4f0e8,roughness:1});   // elf hat
+      const cone=new T.Mesh(new T.ConeGeometry(0.125,0.42,18,6),gr); cone.position.set(0,0.24,0.06); cone.rotation.x=0.55; g.add(cone);
+      const band=new T.Mesh(new T.TorusGeometry(0.125,0.03,8,24),fu); band.rotation.x=Math.PI/2; band.position.y=0.04; g.add(band);
+      const bell=new T.Mesh(new T.SphereGeometry(0.035,10,8),new T.MeshStandardMaterial({color:0xf2c04a,metalness:0.6,roughness:0.25})); bell.position.set(0,0.38,0.27); g.add(bell); }
+    { const g=mk(), sh=new T.MeshStandardMaterial({color:0xf2f4f6,roughness:0.18,metalness:0.1});   // ski helmet
+      const top=new T.Mesh(new T.SphereGeometry(0.135,20,12,0,Math.PI*2,0,Math.PI*0.55),sh); top.scale.set(1,1.05,1.1); top.position.y=0.01; g.add(top);
+      const stripe=new T.Mesh(new T.TorusGeometry(0.11,0.012,6,24,Math.PI),new T.MeshStandardMaterial({color:0xef6a2e,roughness:0.4})); stripe.rotation.set(0,Math.PI/2,0); stripe.position.y=0.03; g.add(stripe); }
+    avatar.userData.hats=hats;
     avatar.traverse(o=>{ if (o.isMesh){ o.castShadow=true; o.receiveShadow=true; } }); }
   addPile(tob,0,0.012,-1.52,0.42,0.06,0.16,-0.2,201);   // hard-packed snow in the bottom of the front curl
   for (const sx of [-1,1]){ addPile(deck,sx*0.1,0.105,-1.31,0.11,0.035,0.09,0.3,215+sx); piles[piles.length-1].boot={sx}; }   // caked on the toes
@@ -2560,7 +2627,7 @@ function pollPad(){
   for (const gp of pads){ if(!gp) continue; const ax=gp.axes[0]||0; padSteer=Math.abs(ax)>0.15?ax:(gp.buttons[14]?.pressed?-1:gp.buttons[15]?.pressed?1:0);
     padTrick=!!(gp.buttons[4]?.pressed||gp.buttons[5]?.pressed); padHands=!!gp.buttons[3]?.pressed; padLook=!!gp.buttons[10]?.pressed||!!gp.buttons[11]?.pressed;
     padBrake=!!(gp.buttons[1]?.pressed||gp.buttons[6]?.pressed); padTuck=!!(gp.buttons[2]?.pressed||gp.buttons[7]?.pressed||gp.buttons[13]?.pressed||(gp.axes[1]||0)>0.6);
-    const jb=!!(gp.buttons[0]?.pressed||(gp.buttons[12]?.pressed&&onGround)); padPitch=Math.abs(gp.axes[1]||0)>0.2?gp.axes[1]:0; if (jb&&!padJumpWas){ if(state==='play') hopReq=0.15; else if((state==='title'||state==='over')&&!$('startBtn').disabled&&$('garage').hidden&&$('settings').hidden) startGame(); } padJumpWas=jb;
+    const jb=!!(gp.buttons[0]?.pressed||(gp.buttons[12]?.pressed&&onGround)); padPitch=Math.abs(gp.axes[1]||0)>0.2?gp.axes[1]:0; if (jb&&!padJumpWas){ if(state==='play') hopReq=0.15; else if((state==='title'||state==='over')&&$('garage').hidden&&$('settings').hidden){ if (state==='title') wizardNext(); else if (!$('startBtn').disabled) startGame(); } } padJumpWas=jb;
     const st=!!gp.buttons[9]?.pressed; if(st&&!padStartWas) togglePause(); padStartWas=st; break; }
 }
 const steerIn=()=>clamp((keys.ArrowLeft||keys.KeyA?1:0)-(keys.ArrowRight||keys.KeyD?1:0)-padSteer,-1,1);
@@ -2581,9 +2648,9 @@ addEventListener('keydown',e=>{
   if (e.code==='KeyF') toggleFullscreen();
   if (e.code==='KeyM') { initAudio(); setMute(!muted); }
   if (e.code==='KeyN') { initAudio(); setMusic(!musicOn); }
-  if (state==='title' && (e.code==='ArrowLeft'||e.code==='ArrowRight') && !(document.activeElement&&document.activeElement.classList.contains('chip'))){ const un=SLEDS.filter(q=>isUnlocked(q)&&sledShown(q)), i=un.findIndex(q=>q.id===SLED.id); pickSled(un[(i+(e.code==='ArrowRight'?1:un.length-1))%un.length].id); }
+  if (state==='title' && titleStep===2 && (e.code==='ArrowLeft'||e.code==='ArrowRight') && !(document.activeElement&&document.activeElement.classList.contains('chip'))){ const un=SLEDS.filter(q=>isUnlocked(q)&&sledShown(q)), i=un.findIndex(q=>q.id===SLED.id); pickSled(un[(i+(e.code==='ArrowRight'?1:un.length-1))%un.length].id); }
   if (e.code==='KeyQ') cycleQuality();
-  if ((e.code==='Enter'||e.code==='NumpadEnter')&&(state==='title'||state==='over')&&!$('startBtn').disabled){ e.preventDefault(); startGame(); }
+  if ((e.code==='Enter'||e.code==='NumpadEnter')&&(state==='title'||state==='over')&&!(document.activeElement&&document.activeElement.tagName==='BUTTON')){ e.preventDefault(); if (state==='title') wizardNext(); else if (!$('startBtn').disabled) startGame(); }
 });
 addEventListener('keyup',e=>{ keys[e.code]=false; });
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; if(state==='play'||state==='crash') togglePause(); });
@@ -2810,7 +2877,33 @@ function renderGarage(){
     btn.textContent=own?(s.id===SLED.id?'Riding':'Ride it'):can?'Buy · '+fmt(s.price):'Need '+fmt(s.price-(prog.bank||0))+' more'; btn.disabled=own?s.id===SLED.id:!can;
     btn.addEventListener('click',()=>{ if (own){ pickSled(s.id); renderGarage(); return; } if ((prog.bank||0)<s.price) return; prog.bank-=s.price; prog.owned.push(s.id); saveProg(); initAudio(); sfx('fanfare'); pickSled(s.id); renderGarage(); });
     r.appendChild(btn); sp.appendChild(r); } }
-function backToTitle(){ state='title'; $('over').hidden=true; $('pause').hidden=true; $('hud').hidden=true; $('title').hidden=false; renderPickers(); }
+function backToTitle(){ state='title'; setStep(1); $('over').hidden=true; $('pause').hidden=true; $('hud').hidden=true; $('title').hidden=false; renderPickers(); }
+/* ---------------- setup: 1 rider, 2 conditions, 3 sled ---------------- */
+let titleStep=0;
+function riderCfg(){ const d={g:'boy',hat:0,jacket:0,pants:0,boots:0,mitts:0}; prog.rider=Object.assign(d,prog.rider||{}); return prog.rider; }
+function applyOutfit(){ const r=riderCfg(); if (!RM.jacket) return;
+  const J=GEAR.jacket[r.jacket]; RM.jacket.map=J.plaid?PLAID:RM.jkMap; RM.jacket.color.set(J.plaid?'#ffffff':J.c); RM.jacket.needsUpdate=true;
+  RM.pants.color.set(GEAR.pants[r.pants].c); RM.boots.color.set(GEAR.boots[r.boots].c);
+  const M=GEAR.mitts[r.mitts], K=knitTexturesC(M.c,M.b); for (const m of RM.mitts){ m.map=K.map; m.bumpMap=K.map; m.needsUpdate=true; } for (const m of RM.cuffs){ m.map=K.rib; m.bumpMap=K.rib; m.needsUpdate=true; }
+  if (avatar){ avatar.userData.hats.forEach((h,k)=>h.visible=k===r.hat); avatar.userData.hair.boy.visible=r.g==='boy'; avatar.userData.hair.girl.visible=r.g==='girl'; avatar.userData.torso.scale.x=avatar.userData.torso.scale.z=r.g==='girl'?0.9:1; } }
+function setStep(n){ titleStep=clamp(n,0,2); for (let k=0;k<3;k++) $('step'+k).hidden=k!==titleStep;
+  [...$('steps').children].forEach((li,k)=>{ li.classList.toggle('on',k===titleStep); li.classList.toggle('done',k<titleStep); });
+  $('backBtn').hidden=titleStep===0; $('nextBtn').hidden=titleStep===2; $('startBtn').hidden=titleStep!==2;
+  $('nextBtn').textContent=titleStep===0?'Next: Conditions →':'Next: Sled →';
+  if (titleStep===0) renderRider(); else renderPickers(); }
+function wizardNext(){ if (titleStep<2) setStep(titleStep+1); else if (!$('startBtn').disabled) startGame(); }
+function renderRider(){ const r=riderCfg();
+  const mk=(el,opts,cur,fn)=>{ el.innerHTML=''; opts.forEach(([id,name,sw])=>{ const b=document.createElement('button'); b.className='chip'+(sw?' sw':''); b.type='button'; b.innerHTML=(sw?'<i style="background:'+sw+'"></i>':'')+name; b.setAttribute('aria-pressed',String(cur===id)); b.addEventListener('click',()=>{ fn(id); saveProg(); applyOutfit(); renderRider(); }); el.appendChild(b); }); };
+  mk($('genderPick'),[['boy','Boy'],['girl','Girl']],r.g,v=>{ r.g=v; Object.assign(r,OUTFITS[v][0].o); });
+  const cur=OUTFITS[r.g].findIndex(o=>Object.keys(o.o).every(k=>o.o[k]===r[k]));
+  mk($('outfitPick'),OUTFITS[r.g].map((o,k)=>[k,o.n]),cur,k=>Object.assign(r,OUTFITS[r.g][k].o));
+  const rows=$('gearRows'); rows.innerHTML='';
+  for (const [key,label] of [['hat','Hat'],['jacket','Jacket'],['pants','Snow pants'],['boots','Boots'],['mitts','Mittens']]){
+    const l=document.createElement('span'); l.className='label'; l.textContent=label; rows.appendChild(l);
+    const pk=document.createElement('div'); pk.className='pick'; pk.setAttribute('role','group'); pk.setAttribute('aria-label',label); rows.appendChild(pk);
+    mk(pk,GEAR[key].map((g,k)=>[k,g.n,g.plaid?'repeating-linear-gradient(45deg,#a3161c 0 4px,#1a1010 4px 8px)':g.b?'linear-gradient(135deg,'+g.c+' 55%,'+g.b+' 55%)':g.c]),r[key],k=>{ r[key]=k; }); } }
+$('nextBtn').addEventListener('click',wizardNext); $('backBtn').addEventListener('click',()=>setStep(titleStep-1));
+[...$('steps').children].forEach((li,k)=>li.addEventListener('click',()=>setStep(k)));
 function pickSled(id){ const s=SLEDS.find(q=>q.id===id); if (!s) return;
   if (!isUnlocked(s)){ $('sledInfo').textContent='🔒 '+s.name+': buy it in the Garage for '+fmt(s.price)+' coins.'; return; }
   setSled(id); prog.sled=id; saveProg(); seedSledSnow(40); renderPickers(); }
@@ -2988,7 +3081,8 @@ function update(dt){
 // chase view: the rider stays exactly where the first-person eye was, and the camera pulls back behind and above them
 const fpAnchor=new T.Object3D(); scene.add(fpAnchor); let chYaw=0, chOn=false, chPos=new T.Vector3(), chLook=new T.Vector3();
 function chaseCam(dt){
-  const want=SETTINGS.chase&&(state==='play'||state==='crash');
+  const dress=state==='title'&&titleStep!==1&&$('garage').hidden&&$('settings').hidden;   // setup screens: show off the rider and sled
+  const want=dress||(SETTINGS.chase&&(state==='play'||state==='crash'));
   if (!want){ if (rig.parent!==camera){ camera.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); } avatar.visible=false; chOn=false; return; }
   fpAnchor.position.copy(camera.position); fpAnchor.quaternion.copy(camera.quaternion); fpAnchor.updateMatrixWorld(true);
   if (rig.parent!==fpAnchor){ fpAnchor.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
@@ -2998,9 +3092,16 @@ function chaseCam(dt){
   const sp=speedNow(), vh=sp>1?Math.atan2(vx,vz):heading; if (!chOn) chYaw=vh; chYaw+=angDiff(vh,chYaw)*Math.min(1,dt*3);
   const back=4.6+Math.min(1.6,sp*0.03), up=1.75, fx=Math.sin(chYaw), fz=Math.cos(chYaw);
   const tx=px-fx*back, tz=pz-fz*back, ty=Math.max(gH(tx,tz)+0.8,py+up);
-  if (!chOn){ chPos.set(tx,ty,tz); chLook.set(px,py+0.6,pz); } chOn=true;
-  chPos.lerp(new T.Vector3(tx,ty,tz),Math.min(1,dt*8)); chLook.lerp(new T.Vector3(px+fx*2.5,py+0.55,pz+fz*2.5),Math.min(1,dt*10));
+  if (!chOn){ chPos.set(tx,ty,tz); chLook.set(px,py+0.6,pz); if (dress) chPos.set(px+fx*2.3,py+0.95,pz+fz*2.3); } chOn=true;
+  if (!dress){ chPos.lerp(_dv.set(tx,ty,tz),Math.min(1,dt*8)); chLook.lerp(_dl.set(px+fx*2.5,py+0.55,pz+fz*2.5),Math.min(1,dt*10)); }
+  if (dress){ // out in front and off to one side, looking back at the rider; aim past them so they sit to the right of the menu
+    const rx=Math.cos(chYaw), rz=-Math.sin(chYaw), wide=innerWidth>760, side=wide?-1:0;
+    const dist=titleStep===2?3.4:2.9, cx2=px+fx*dist-rx*1.1*(wide?1:0.3), cz2=pz+fz*dist-rz*1.1*(wide?1:0.3), cy2=Math.max(gH(cx2,cz2)+0.6,py+1.05);
+    const lx=px+fx*0.55+rx*side*1.05, lz=pz+fz*0.55+rz*side*1.05;
+    chPos.lerp(_dv.set(cx2,cy2,cz2),Math.min(1,dt*18)); chLook.lerp(_dl.set(lx,py+0.4,lz),Math.min(1,dt*18)); }
   camera.position.copy(chPos); camera.lookAt(chLook); if (state==='crash') camera.position.y+=0.3; }
+const _dv=new T.Vector3(), _dl=new T.Vector3();
+const _hp=new T.Vector3();
 function updateCamera(dt){
   const sp=speedNow(), fx=Math.sin(heading), fz=Math.cos(heading);
   const look=7+sp*0.45, gh=height(px,pz), ah=height(px+Math.sin(camYaw)*look,pz+Math.cos(camYaw)*look);
@@ -3030,8 +3131,10 @@ function updateCamera(dt){
   const HO=HAND_OFF[SLED.form], hk=1-handsUp, ropeSled=SLED.form==='toboggan'||SLED.form==='racer'||SLED.form==='bobsled', st=state==='crash'?0:steerNow;
   for (const hnd of hands){ const sx=hnd.userData.sx, a=Math.max(0,-sx*st)*hk, o=Math.max(0,sx*st)*hk;   // a: the hand on the inside of the turn, o: the outside hand
     // rope sleds: haul the inside rope back to your chest and push the other forward; saucer and tube: reach down and drag the inside hand in the snow
-    const tx=ropeSled?sx*o*0.03:sx*a*0.12, ty=ropeSled?a*0.03+o*0.05:-a*0.15+o*0.03, tz=ropeSled?a*0.19-o*0.1:a*0.07-o*0.03;
-    hnd.position.set(sx*HO[0]*hk-sx*tuckAmt*0.03+sx*pa*0.1+sx*handsUp*0.24+tx,HO[1]*hk-tuckAmt*0.06-pa*0.26+handsUp*0.44+ty,HO[2]*hk-tuckAmt*0.05+pa*0.22+handsUp*0.28+tz); }
+    const tk=1-tuckAmt*0.6, tx=ropeSled?sx*o*0.03:sx*a*0.12, ty=ropeSled?(a*0.02+o*0.05)*tk:-a*0.15+o*0.03, tz=ropeSled?(a*0.12-o*0.1)*tk:a*0.07-o*0.03;
+    hnd.position.set(sx*HO[0]*hk-sx*tuckAmt*0.03+sx*pa*0.1+sx*handsUp*0.24+tx,HO[1]*hk-tuckAmt*0.04-pa*0.26+handsUp*0.44+ty,HO[2]*hk-tuckAmt*0.36+pa*0.22+handsUp*0.28+tz);   // in a tuck your hands go forward with you
+    // never let a mitten come right up against the lens (that's when you'd see inside the cuff and sleeve)
+    _hp.copy(hnd.position).add(deck.position); const hd=_hp.length(), minD=0.5; if (hd<minD){ _hp.multiplyScalar(minD/Math.max(hd,0.01)).sub(deck.position); hnd.position.copy(_hp); } }
   for (let i=0;i<rocketFlames.length;i++){ const f=rocketFlames[i], k=rocketAmt*(0.85+0.3*Math.random()); f.scale.set(1,0.01+k*(i%2?0.9:1.2),1); f.visible=rocketAmt>0.02; }
   if (rocketG&&AC) rocketG.gain.setTargetAtTime(rocketAmt*0.55,AC.currentTime,0.05);
   if (rocketAmt>0.1 && !reduceMotion) jolt+=(Math.random()-0.5)*rocketAmt*0.04;
@@ -3059,7 +3162,7 @@ function boot(){
   setSled(SLED.id); SNOW=SNOWFALL[SNOWFALL[prog.snow]?prog.snow:'flurry']; snowNow=SNOWFALL[prog.snow]?prog.snow:'flurry'; applyConditions(CONDS[prog.cond]?prog.cond:'golden'); applySurface(SURFS[prog.surf]?prog.surf:'packed'); applyTheme(prog.theme==='christmas'?'christmas':'classic');
   qualityLabels(); applyQuality(false); applyTouch(); extendCourse(1200); resetRun(); updateChunks(true);
   state='title'; vx=Math.sin(heading)*10; vz=Math.cos(heading)*10;
-  const b=$('startBtn'); b.disabled=false; b.textContent='Push off'; b.focus({preventScroll:true});
+  const b=$('startBtn'); b.disabled=false; b.textContent='Push off ▶'; applyOutfit(); setStep(0); $('nextBtn').focus({preventScroll:true});
   renderPickers();
   requestAnimationFrame(t=>{ last=t; frame(t); });
 }
