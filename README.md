@@ -17,6 +17,7 @@ Ride the whole mountain from the Pine Forest through the Alpine Bowl, Frozen Riv
 | G | No hands |
 | C | Look back |
 | V | Rider view or chase view |
+| O | Goggles on or off (see a little farther in heavy snow) |
 | P or Esc | Pause |
 
 Gamepads work too, and phones and tablets get on-screen touch buttons.
