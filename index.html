@@ -456,7 +456,7 @@ const CONDS={
 // n: flakes at High quality · fall: how fast flakes drop (m/s) · size: flake size range (m) · drift: wind carrying the snow (m/s) · turb: swirling
 // flutter: side-to-side tumble · box: how tightly the snow packs around you · ground: snow blowing along the surface · wind: gusts on the sled
 // fogAdd: extra haze · sunK: sunlight getting through · mult: score bonus for riding in it
-let veilOn=-1, veilA=0;
+let veilOn=-1, veilA=0, veilS='';
 function setGoggles(on){ SETTINGS.goggles=on; try{ localStorage.setItem('sledSettings',JSON.stringify(SETTINGS)); }catch(e){} const b=document.getElementById('gogBtn'); if (b) b.setAttribute('aria-pressed',String(on));
   gogShown=-1; }
 let gogShown=-1;
@@ -2526,6 +2526,7 @@ function applyConditions(id){ condNow=CONDS[id]?id:'golden'; const B=CONDS[condN
   GLINT_U.value=SURF.glint*clamp(L.sunK*1.25-0.15,0,1);
   $('app').style.background=fog; veilOn=-1; }
 function applySnowfall(id){ snowNow=SNOWFALL[id]?id:'flurry'; SNOW=SNOWFALL[snowNow]; applyConditions(condNow); }
+let gdOff=null;
 function updateSnowfall(dt){
   const L=SNOW; if (!L||(!L.n&&!L.ground)) return; snowT+=dt;
   const cX=camera.position.x, cZ=camera.position.z, t=snowT;
@@ -2535,10 +2536,14 @@ function updateSnowfall(dt){
   const G_=flakeGPU; G_.uTime.value=t; G_.uWind.value.copy(snowWind); G_.uCam.value.copy(camera.position); G_.uBN.value=L.box; G_.uBF.value=L.box*2.8; G_.uFall.value.set(L.fall[0],L.fall[1]); G_.uTu.value=L.turb; G_.uFl.value=L.flutter;
   const nG=groundCount();
   if (nG){ const G=18, G2=36; // spindrift: snow skating along the surface in long sweeps, lifting in gusts
+    // ground height near you as a tilted plane (3 lookups a frame); each flake keeps its own correction to the real ground, refreshed every 8 frames
+    const h0=height(cX,cZ), hx=(height(cX+6,cZ)-height(cX-6,cZ))/12, hz=(height(cX,cZ+6)-height(cX,cZ-6))/12, slot=(t*60|0)&7;
+    if (!gdOff||gdOff.length<GDRIFT) gdOff=new Float32Array(GDRIFT);
     for (let i=0;i<nG;i++){ const o=i*3, sd=gdSeed[i]; let x=gdPos[o], z=gdPos[o+2]; const k=1.1+sd*0.5;
       x+=(wx*k+Math.sin(z*0.4+t*2+sd*30)*tu*0.4)*dt; z+=(wz*k+Math.cos(x*0.4-t*1.7+sd*30)*tu*0.4)*dt;
       if (x-cX>G||x-cX<-G) x=cX+((x-cX+G)%G2+G2)%G2-G; if (z-cZ>G||z-cZ<-G) z=cZ+((z-cZ+G)%G2+G2)%G2-G;
-      gdPos[o]=x; gdPos[o+2]=z; if ((i+(t*60|0))%2===0) gdPos[o+1]=height(x,z)+gdH[i]*(0.6+0.6*Math.max(0,noise2(x*0.08+t*0.5,z*0.08)));
+      gdPos[o]=x; gdPos[o+2]=z; const plane=h0+(x-cX)*hx+(z-cZ)*hz; if ((i&7)===slot) gdOff[i]=height(x,z)-plane;
+      gdPos[o+1]=plane+gdOff[i]+gdH[i]*(0.6+0.6*Math.max(0,0.5*Math.sin(x*0.11+t*0.9)+0.5*Math.cos(z*0.09-t*0.6)));
       gdRot[i]+=dt*3; }
     gdGeo.attributes.position.needsUpdate=true; gdGeo.attributes.aRot.needsUpdate=true; }
   const sc=sprayMat.uniforms.uScale.value; camera.getWorldDirection(_fw2);
@@ -2729,8 +2734,8 @@ function collide(){
     if (d<1.35 && hAbove<2.6 && invuln<=0){ crash(yeti.mode==='chase'?'Caught by the yeti':'Flattened by the yeti'); return; }
     if (!yeti.nm && d<4.5 && d>=1.35){ yeti.nm=true; nearMiss++; comboAdd(500,'Yeti dodge'); toast('That was <em>too</em> close'); } }
   for (const c of critters){ if (!c.active) continue; const cxp=cx(c.z)+c.u, d=Math.hypot(px-cxp,pz-c.z);
-    if (d<c.r+0.35 && hAbove<c.h*0.8 && invuln<=0){ crash(c.kind==='moose'?'Ran into a moose':'Collided with a deer'); return; }
-    if (!c.nm && d<c.r+3 && sp>6){ c.nm=true; nearMiss++; comboAdd(c.kind==='moose'?400:250,c.kind==='moose'?'Moose dodge':'Deer dodge'); } }
+    if (d<c.r+0.35 && hAbove<c.h*0.8 && invuln<=0){ crash({moose:'Ran into a moose',deer:'Collided with a deer',reindeer:'Collided with a reindeer',rudolph:'Ran into Rudolph',elf:'Bowled over an elf'}[c.kind]||'Hit an animal'); return; }
+    if (!c.nm && d<c.r+3 && sp>6){ c.nm=true; nearMiss++; comboAdd(c.kind==='moose'||c.kind==='rudolph'?400:250,{moose:'Moose dodge',deer:'Deer dodge',reindeer:'Reindeer dodge',rudolph:'Rudolph dodge',elf:'Elf dodge'}[c.kind]||'Close call'); } }
   const st=streamAt(pz); if (st && !st.frozen && invuln<=0 && py<waterLevel(st)+0.08){ emit(px,py,pz,vx*0.2,3,vz*0.2,120,2.5); sfx('splash',1.2); crash('Into the creek'); }
 }
 function paintSplat(k){ const c=$('dump'), w=Math.max(2,Math.round(innerWidth*0.6)), h=Math.max(2,Math.round(innerHeight*0.6)); c.width=w; c.height=h;
@@ -2810,7 +2815,7 @@ document.addEventListener('visibilitychange',()=>{ if (document.hidden) clearKey
 const fmt=n=>Math.floor(n).toLocaleString('en-US');
 function renderPips(){ const pp=$('pips'); if (pp.children.length!==DIFF.lives) pp.innerHTML='<i></i>'.repeat(DIFF.lives); [...pp.children].forEach((el,i)=>el.classList.toggle('gone',i<crashes)); }
 let toastTimer=0, alarmUntil=0; function toast(html,alarm){ const now=performance.now(); if (typeof XR!=='undefined'&&XR.on) xrMsg(html); if (!alarm && now<alarmUntil) return; if (alarm) alarmUntil=now+1500; const t=$('toast'); t.innerHTML=html; t.classList.toggle('alarm',!!alarm); t.classList.add('on'); lastToast=time; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'),alarm?1700:1300); }
-let fpsAcc=0, fpsN=0, autoTuned=false, keysT=0, runLive=false, lastEarned=0;
+let fpsW=0, fpsWN=0, manualQ=false, fpsAcc=0, fpsN=0, autoTuned=false, keysT=0, runLive=false, lastEarned=0;
 try { autoTuned=localStorage.getItem('sledQuality')!==null; } catch(e){}
 function clearHazards(){ noseLight.intensity=0; $('glare').style.opacity='0'; yeti.active=false; yeti.g.visible=false; for (const c of critters){ c.active=false; c.g.visible=false; } for (const a of AVAL) a.done=true; avNow=null; clearCracks(); $('chase').hidden=true; $('gauge').hidden=true; }
 /* ---------------- fresh-powder extras: snow bombs off the branches, animal tracks across the slope ---------------- */
@@ -2895,7 +2900,7 @@ function updateGhost(dt){
   if (!g){ ghostG.visible=false; if (el) el.hidden=true; return; }
   const z=startZ+g.z, x=cx(z)+g.u, z2=startZ+g.z2, x2=cx(z2)+g.u2;
   ghostG.position.set(x,gH(x,z)-(surfNow==='powder'?0.15:0),z); ghostG.rotation.set(0,Math.atan2(x2-x,Math.max(0.01,z2-z)),0); ghostG.visible=Math.abs(z-pz)>1.2;
-  const gap=Math.round((z-pz)*3.281); if (el){ el.hidden=false; const who=racing?RACE.n:'Best run'; el.textContent=racing?(gap>0?who+': '+fmt(gap)+' ft ahead of you':gap<0?'You lead '+who+' by '+fmt(-gap)+' ft':'Neck and neck with '+who):(gap>0?'Best run: '+fmt(gap)+' ft ahead':gap<0?'Beating your best by '+fmt(-gap)+' ft':'Neck and neck with your best'); el.classList.toggle('ahead',gap<0); } }
+  const gap=Math.round((z-pz)*3.281); if (el){ el.hidden=false; const who=racing?RACE.n:'Best run'; const txt=racing?(gap>0?who+': '+fmt(gap)+' ft ahead of you':gap<0?'You lead '+who+' by '+fmt(-gap)+' ft':'Neck and neck with '+who):(gap>0?'Best run: '+fmt(gap)+' ft ahead':gap<0?'Beating your best by '+fmt(-gap)+' ft':'Neck and neck with your best'); if (el.textContent!==txt){ el.textContent=txt; el.classList.toggle('ahead',gap<0); } } }
 function saveGhost(ft){ if (ghRec.z.length<10 || (GHOST&&GHOST.ft>=ft)) return; GHOST={ft:Math.round(ft),z:ghRec.z.slice(),u:ghRec.u.slice()}; try{ localStorage.setItem('sledGhost',JSON.stringify(GHOST)); }catch(e){} }
 
 /* ---------------- challenge a friend ----------------
@@ -3342,7 +3347,7 @@ function applyQuality(rebuild){
   scene.traverse(o=>{ if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true); } });
   qualityLabels();
 }
-function cycleQuality(){ if (XR.on) return; qi=(qi+1)%3; autoTuned=true; try{ localStorage.setItem('sledQuality',String(qi)); }catch(e){} applyQuality(true); if(state==='play') toast('Graphics: <em>'+QUALITY[qi].name+'</em>'); }
+function cycleQuality(){ if (XR.on) return; qi=(qi+1)%3; autoTuned=true; manualQ=true; try{ localStorage.setItem('sledQuality',String(qi)); }catch(e){} applyQuality(true); if(state==='play') toast('Graphics: <em>'+QUALITY[qi].name+'</em>'); }
 $('startBtn').addEventListener('click',startGame); $('againBtn').addEventListener('click',startGame);
 $('pauseBtn').addEventListener('click',e=>{ togglePause(); e.currentTarget.blur(); }); $('resumeBtn').addEventListener('click',togglePause); $('quitBtn').addEventListener('click',startGame);
 $('fsBtn').addEventListener('click',e=>{ toggleFullscreen(); e.currentTarget.blur(); });
@@ -3382,14 +3387,14 @@ function updateHazardsAndZones(dt){
     if (spdTier>0 && spdHold>=4){ spdHold=0; comboAdd([0,250,500,900][spdTier],['', 'Speed run','Flying','Breakneck speed'][spdTier]); }
     spdTagOn=mph>30; }
   if (playing) for (const f of FINISHES) if (!f.done && pz>f.z){ f.done=true; RUN.cps=(RUN.cps||0)+1; bankCombo(); const cb=Math.round((1500+500*Math.min(6,RUN.cps))*SNOW.mult); score+=cb; sfx('fanfare');
-    toast('<em>'+pick(['Great job!','Nice riding!','Checkpoint!','Keep it up!','Way to go!','Looking sharp!','Crushing it!'])+'</em> Checkpoint '+RUN.cps+' · +'+fmt(cb),true);
+    toast('<em>'+pick(['Great job!','Nice riding!','Checkpoint!','Keep it up!','Way to go!','Looking sharp!','Crushing it!'])+'</em> Checkpoint '+RUN.cps+' · +'+fmt(cb)+' · '+ZNAME[zoneAt(f.z+20)],true);
     for (let k=0;k<160;k++){ const a=R()*6.28; emit(px+Math.cos(a)*rr(1,6),py+rr(0.5,5),pz+rr(0,8),Math.cos(a)*rr(1,4)+vx*0.5,rr(1,5),vz*0.6,1,0.5,{size:[0.06,0.2],life:[1,2],g:1.2,drag:1,kind:1}); } }
   if (playing && comboMult>0){ if (onGround) comboT-=dt; if (comboT<=0) bankCombo(); $('cBar').style.width=clamp(comboT/5,0,1)*100+'%'; }
   const zn=zoneAt(pz), fmT=zn==='alpine'?0.7:zn==='lake'?0.85:zn==='village'?1.1:1; fogMul+=(fmT-fogMul)*Math.min(1,dt*0.5); scene.fog.density=(SETTINGS.goggles?0.74:1)*COND.fogD*fogMul*(1+(COND.pulse||0)*Math.max(-0.6,noise2(time*0.22,7.7)*1.6));
   if (playing && COND.wind>1.2 && R()<dt*(COND.wind>2?0.14:0.06)) faceSnow(COND.wind>2?0.16:0.1);
   { const vl=SNOW.veil&&state!=='title'?SNOW.veil:0, vo=vl?clamp(0.12+0.5*Math.max(0,noise2(time*0.35,3.3)+0.25)*snowGust+0.25*Math.max(0,noise2(time*1.3,8.1)),0,0.6):0;   // snowpocalypse: walls of snow blasting across your view
     if (vl!==veilOn){ veilOn=vl; const c=scene.fog.color, rgb=(c.r*255|0)+','+(c.g*255|0)+','+(c.b*255|0); $('veil').style.background=vl?'radial-gradient(ellipse at 50% 55%, rgba('+rgb+',0.5) 0%, rgba('+rgb+',0.85) 55%, rgba('+rgb+',1) 100%)':'none'; }
-    veilA+=(vo*(SETTINGS.goggles?0.62:1)-veilA)*Math.min(1,dt*2.2); updateGogLook(); $('veil').style.opacity=veilA.toFixed(3); }
+    veilA+=(vo*(SETTINGS.goggles?0.62:1)-veilA)*Math.min(1,dt*2.2); updateGogLook(); const vs=veilA.toFixed(2); if (vs!==veilS){ veilS=vs; $('veil').style.opacity=vs; } }
   if (playing && COND.wind>2 && onGround && !reduceMotion) joltV+=(R()-0.5)*snowGust*0.35;   // the wind buffets you in a whiteout
   if (AC&&avG){ const gap=avNow?pz-avNow.front:999; avG.gain.setTargetAtTime(avNow?clamp(1.15-gap/110,0.12,1.1):0,AC.currentTime,0.2); }
   updateMusic();
@@ -3496,6 +3501,7 @@ function update(dt){
     { const ftNow=(pz-startZ)*3.281; for (const s of SLEDS){ const r=s.req; if (r && !s.toasted && !unlockedAtStart.includes(s.id) && ((r.k==='ft'&&ftNow>=r.v)||(r.k==='score'&&score>=r.v))){ s.toasted=true; toast('Unlocked: <em>'+s.name+'</em>',true); } } }
     { let zs=ZSEG[0]; for (const q of ZSEG) if (pz>=q.z0) zs=q; const z1=zs.z1||Math.max(zEnd,zs.z0+300); $('zoneDot').style.left=clamp((pz-zs.z0)/Math.max(1,z1-zs.z0),0,1)*100+'%'; } }
   // automatic quality step-down if the first seconds of a run are choppy
+  if (state==='play' && !XR.on && !manualQ && qi>0 && qi<3){ fpsW+=dt; fpsWN++; if (fpsW>6){ const f=fpsWN/fpsW; fpsW=0; fpsWN=0; if (f<27){ qi--; applyQuality(true); try{ localStorage.setItem('sledQuality',String(qi)); }catch(e){} toast('Graphics set to <em>'+QUALITY[qi].name+'</em> to keep it smooth'); } } } else { fpsW=0; fpsWN=0; }
   if (state==='play' && !autoTuned){ fpsAcc+=dt; fpsN++; if (fpsAcc>5){ const fps=fpsN/fpsAcc; autoTuned=true; if (fps<34 && qi>0 && qi<3){ qi--; applyQuality(true); toast('Graphics set to <em>'+QUALITY[qi].name+'</em> for smoother play'); } } }
 }
 // chase view: the rider stays exactly where the first-person eye was, and the camera pulls back behind and above them
