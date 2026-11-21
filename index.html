@@ -238,7 +238,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
   <div id="hud" hidden>
     <div class="hud-tl"><span class="label">Distance</span><span class="big" id="dist">0<small>ft</small></span>
       <span class="label gap">Score <b id="snowMult" class="smult"></b></span><span class="mid" id="score">0</span>
-      <div class="zone"><span id="zoneName">Pine Forest</span><div class="zbar" aria-hidden="true"><i></i><i></i><i></i><i></i><b id="zoneDot"></b><em>🏁</em></div></div>
+      <div class="zone"><span id="zoneName">Pine Forest</span><div class="zbar" aria-hidden="true"><i></i><b id="zoneDot"></b></div></div>
       <span id="ghostGap" hidden></span>
       <ul id="chal" aria-label="Challenges this run"></ul></div>
     <div id="combo" aria-live="polite"><b id="cMult">×1</b><div><span id="cLabel"></span><span id="cPts"></span></div><i id="cBar"></i></div>
@@ -256,18 +256,18 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
     <div id="touch" hidden>
       <div class="tl"><button data-k="ArrowLeft" aria-label="Lean left">◀</button><button data-k="ArrowRight" aria-label="Lean right">▶</button></div>
       <div class="tr"><button data-k="ShiftLeft" class="sm" aria-label="Brake or trick">TRICK<br>BRAKE</button><button data-k="ArrowDown" class="sm" aria-label="Tuck">TUCK</button><button data-k="Space" class="big" aria-label="Hop">HOP</button>
-        <div class="tmini"><button data-k="KeyO" aria-label="Goggles">🥽</button><button data-k="KeyG" aria-label="No hands">✋</button><button data-k="KeyC" aria-label="Look back">↺</button><button data-k="KeyV" aria-label="Switch view">🎥</button></div></div>
+        <div class="tmini"><button data-k="KeyO" aria-label="Goggles">🥽</button><button data-k="KeyC" aria-label="Look back">↺</button><button data-k="KeyV" aria-label="Switch view">🎥</button></div></div>
     </div>
     <div id="toast"></div>
-    <div id="keys"><span><kbd>←</kbd><kbd>→</kbd> lean</span><span><kbd>↓</kbd> tuck · tap when stuck to push</span><span><kbd>Shift</kbd> brake</span><span><kbd>Space</kbd> or <kbd>↑</kbd> hop</span><span>Air: <kbd>↑</kbd><kbd>↓</kbd> nose · <kbd>←</kbd><kbd>→</kbd> lean</span><span>Tricks: hold <kbd>Shift</kbd> + arrows to spin/flip · <kbd>G</kbd> no hands</span><span><kbd>C</kbd> look back</span></div>
+    <div id="keys"><span><kbd>←</kbd><kbd>→</kbd> lean</span><span><kbd>↓</kbd> tuck · tap when stuck to push</span><span><kbd>Shift</kbd> brake</span><span><kbd>Space</kbd> or <kbd>↑</kbd> hop</span><span>Air: <kbd>←</kbd><kbd>→</kbd> lean</span><span>Tricks: hold <kbd>Shift</kbd> + arrows to spin/flip</span><span><kbd>C</kbd> look back</span></div>
     <div id="gauge" hidden><svg viewBox="0 0 220 64" width="220" height="64" aria-hidden="true"><g transform="translate(55,36)"><line x1="-46" y1="0" x2="46" y2="0" class="gl"/><g id="gP"><path d="M-30,-3 L20,-3 Q31,-3 31,-14 L27,-14 Q27,-7 19,-7 L-30,-7 Z" class="gs"/></g><text x="0" y="22" class="gt">NOSE</text></g><g transform="translate(165,36)"><line x1="-46" y1="0" x2="46" y2="0" class="gl"/><g id="gR"><rect x="-28" y="-9" width="56" height="6" rx="2" class="gs"/><rect x="-24" y="-3" width="5" height="3" class="gs"/><rect x="19" y="-3" width="5" height="3" class="gs"/></g><text x="0" y="22" class="gt">LEAN</text></g></svg><span id="gHint">Looking good</span></div>
   </div>
 
   <section class="screen" id="title">
     <div class="card">
-      <p class="eyebrow">Pine forest · alpine bowl · frozen river · village · finish</p>
+      <p class="eyebrow">An endless mountain · how far can you go?</p>
       <h1>Sled of Destiny</h1>
-      <p class="lede">Ride the whole mountain from the pines to the finish line. Chain tricks for points, outrun avalanches and the yeti, and unlock faster, wilder sleds.</p>
+      <p class="lede">Ride an endless mountain through pine forest, alpine bowls, frozen rivers and the odd village. Chain tricks for points, outrun avalanches and the yeti, and unlock faster, wilder sleds.</p>
       <ol class="steps" id="steps" aria-label="Setup steps"><li data-s="0"><b>1</b>Rider</li><li data-s="1"><b>2</b>Conditions</li><li data-s="2"><b>3</b>Sled</li></ol>
       <div class="step" id="step0">
         <div class="pickrow inline"><span class="label">Rider</span><div class="pick" id="genderPick" role="group" aria-label="Boy or girl"></div></div>
@@ -275,6 +275,8 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
         <div class="gear" id="gearRows"></div>
       </div>
       <div class="step" id="step1" hidden>
+        <div class="pickrow inline"><span class="label">Difficulty</span><div class="pick" id="diffPick" role="group" aria-label="Difficulty"></div></div>
+        <p class="hint" id="diffInfo"></p>
         <div class="pickrow inline"><span class="label">Time of day</span><div class="pick" id="condPick" role="group" aria-label="Time of day"></div></div>
         <div class="pickrow inline"><span class="label">Snowfall</span><div class="pick" id="snowPick" role="group" aria-label="Snowfall"></div></div>
         <div class="pickrow inline"><span class="label">Ground</span><div class="pick" id="surfPick" role="group" aria-label="Snow on the ground"></div></div>
@@ -284,7 +286,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
         <div class="pickrow"><span class="label">Sled</span><div class="pick" id="sledPick" role="group" aria-label="Choose a sled"></div><p class="hint" id="sledInfo"></p><div id="sledStats" aria-label="Sled stats"></div></div>
         <p class="hint">Controls: arrows or A/D to lean, ↓ to tuck, Space to hop, Shift for tricks and braking. The full list is in ⚙ Settings.</p>
       </div>
-      <div class="row nav"><button class="btn ghost" id="backBtn" hidden>← Back</button><button class="btn" id="nextBtn">Next: Conditions →</button><button class="btn" id="startBtn" disabled hidden>Building the hill…</button>
+      <div class="row nav"><button class="btn ghost" id="backBtn" hidden>← Back</button><button class="btn" id="nextBtn">Next: Conditions →</button><button class="btn" id="startBtn" disabled hidden>Building the hill…</button><button class="btn ghost" id="vrBtn" hidden>🥽 Ride in VR</button>
         <button class="btn ghost small" id="garageBtn">🔧 Garage</button><button class="btn ghost small" id="setBtn">⚙ Settings</button><button class="btn ghost small" id="qualBtn2">Graphics: High</button></div>
       <p class="hint" id="bestTitle" hidden></p>
     </div>
@@ -309,10 +311,10 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
         <span><kbd>↓</kbd> / <kbd>S</kbd></span><span>Tuck for speed · tap when stuck to push off</span>
         <span><kbd>Space</kbd> / <kbd>↑</kbd></span><span>Hop</span>
         <span><kbd>Shift</kbd></span><span>Brake · in the air, hold with arrows for spins and flips · saucer and tube spin on the snow</span>
-        <span><kbd>G</kbd></span><span>No hands</span>
         <span><kbd>C</kbd></span><span>Look back</span>
         <span><kbd>V</kbd></span><span>Switch between rider view and chase view</span>
         <span><kbd>O</kbd></span><span>Goggles on or off: a little more contrast and a little farther through the snow</span>
+        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Thumbstick steer · right trigger tuck · left trigger brake · A hop · grip + stick for tricks · X goggles · Y pause</span>
         <span><kbd>P</kbd> / <kbd>Esc</kbd></span><span>Pause</span>
         <span><kbd>M</kbd> · <kbd>N</kbd> · <kbd>F</kbd> · <kbd>Q</kbd></span><span>Sound · music · fullscreen · graphics</span>
       </div>
@@ -329,7 +331,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
       <div id="gRows"></div>
       <p class="label gsub">Specialty sleds</p>
       <div id="gSpecial" class="gspecial"></div>
-      <div class="row"><button class="btn" id="gDone">Done</button><p class="hint">Runs pay coins for your score, distance, finish lines and challenges.</p></div>
+      <div class="row"><button class="btn" id="gDone">Done</button><p class="hint">Runs pay coins for your score, distance, new zones and challenges.</p></div>
     </div>
   </section>
 
@@ -356,7 +358,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
       <p class="hint" id="overBest"></p>
       <p class="hint unlock" id="overUnlock" hidden></p>
       <ul id="overChal" aria-label="Challenges"></ul>
-      <div class="row"><button class="btn" id="againBtn">Hike back up</button><button class="btn ghost small" id="menuBtn">Sled &amp; conditions</button><button class="btn ghost small" id="garageBtn2">🔧 Garage</button><p class="hint">or press <kbd>Enter</kbd></p></div>
+      <div class="row"><button class="btn ghost" id="vrBtn2" hidden>🥽 Ride in VR</button><button class="btn" id="againBtn">Hike back up</button><button class="btn ghost small" id="menuBtn">Sled &amp; conditions</button><button class="btn ghost small" id="garageBtn2">🔧 Garage</button><p class="hint">or press <kbd>Enter</kbd></p></div>
     </div>
   </section>
 </div>
@@ -475,11 +477,26 @@ const UP_COST=[1500,4000,9000];
 if (prog.bank===undefined){ prog.bank=Math.round(prog.bestScore||0); }   // first visit to the garage: your best run seeds the wallet
 if (!prog.coinsV){ prog.bank=Math.round((prog.bank||0)*0.15); prog.coinsV=1; }   // the wallet now holds coins, not raw score
 prog.owned=prog.owned||[]; prog.up=prog.up||{}; for (const s of SLEDS){ prog.up[s.id]=Object.assign({speed:0,handling:0,air:0,landing:0},prog.up[s.id]||{}); }
+/* ---------------- difficulty ----------------
+   obs: share of the obstacles a section would place in your line; extra: added rocks, trees and logs per metre;
+   edge: how thick the trees crowd the edges of the run; handling and landing forgiveness; how often animals and the yeti turn up. */
+const DIFFS={
+  kids:{name:'Kids',obs:0.3,extra:0,edge:0.45,lane:7.5,turn:1.3,grip:1.35,tol:1.8,drag:1.45,crit:0.45,yeti:0,lives:5,ban:['cliff','mega','avalanche','gauntlet','steep','plunge','ledges','logs','uphill'],calm:true},
+  easy:{name:'Easy',obs:0.62,extra:0,edge:0.75,lane:7,turn:1.14,grip:1.17,tol:1.3,drag:1.15,crit:0.7,yeti:0.6,lives:4,ban:['mega','cliff']},
+  medium:{name:'Medium',obs:1,extra:0,edge:1,lane:6.5,turn:1,grip:1,tol:1,drag:1,crit:1,yeti:1,lives:3,ban:[]},
+  hard:{name:'Hard',obs:1.25,extra:0.045,edge:1.3,lane:5.8,turn:1,grip:1,tol:0.93,drag:1,crit:1.3,yeti:1.3,lives:3,ban:[]},
+  pro:{name:'Alpine Pro',obs:1.5,extra:0.085,edge:1.6,lane:5.2,turn:1,grip:1,tol:0.86,drag:1,crit:1.6,yeti:1.6,lives:3,ban:[]},
+};
+const DIFF_BLURB={kids:'Wide-open runs, few obstacles, no cliffs, yeti or avalanches, and a forgiving sled. Five crashes.',easy:'Fewer obstacles and an easier sled to steer. Four crashes.',medium:'The standard mountain.',hard:'More trees, rocks and logs in your line, and more animals.',pro:'A packed mountain: thick trees, rocks and logs everywhere, a narrower run and frequent animals. Not impossible, just fast reflexes.'};
+let DIFF=DIFFS[prog.diff]||DIFFS.medium;
+function setDifficulty(id){ prog.diff=DIFFS[id]?id:'medium'; DIFF=DIFFS[prog.diff]; saveProg(); setSled(SLED.id); }
+const HAZ=new Set(['rock','pine','birch','log','bare']);
 function deriveSled(b){ const L=prog.up[b.id], s=Object.assign({},b);
   s.drag=b.drag*(1-0.05*L.speed); s.mu=b.mu*(1-0.07*L.speed); s.iceMu=b.iceMu*(1-0.07*L.speed);
   s.turn=b.turn*(1+0.08*L.handling); s.grip=b.grip*(1+0.08*L.handling); s.resp=b.resp*(1+0.1*L.handling); s.align=b.align*(1+0.05*L.handling);
   s.hop=b.hop*(1+0.06*L.air); s.spin=b.spin*(1+0.08*L.air); s.flip=b.flip*(1+0.08*L.air);
-  s.tol=b.tol*(1+0.07*L.landing); s.deepMu=b.deepMu*(1-0.15*L.landing); return s; }
+  s.tol=b.tol*(1+0.07*L.landing); s.deepMu=b.deepMu*(1-0.15*L.landing);
+  const Df=typeof DIFF!=='undefined'?DIFF:{turn:1,grip:1,tol:1,drag:1}; s.turn*=Df.turn; s.grip*=Df.grip; s.tol*=Df.tol; s.drag*=Df.drag; return s; }
 let SLED=deriveSled(SLEDS.find(s=>s.id===prog.sled&&isUnlocked(s)&&sledShown(s))||SLEDS[0]);
 let condNow='golden', surfNow='packed', snowNow='flurry', COND=CONDS.golden, SURF=SURFS.packed, SNOW=SNOWFALL.flurry;
 
@@ -487,12 +504,13 @@ let condNow='golden', surfNow='packed', snowNow='flurry', COND=CONDS.golden, SUR
 const D=[0]; let genZ=0, curSl=0.2, lastSec='';
 const FB=new Map(), OB=new Map(), ICE=[], STREAMS=[], MEGAS=[], AVAL=[], FINISHES=[], ROADS=[], ZSEG=[], SANTAS=[]; let lastMega=-1e9, lastSanta=-1e9;
 const GIFT_LOCAL=[[-2.3,1.3,0.42],[2.7,-1.5,0.34],[0.5,-2.2,0.5],[-1.5,2.5,0.3],[3.2,1.7,0.38],[-3.2,-0.6,0.36]];
-// the mountain is ridden in zones that repeat after each finish line
-const ZONES=[{id:'forest',name:'Pine Forest',len:700},{id:'alpine',name:'Alpine Bowl',len:520},{id:'lake',name:'Frozen River',len:300},{id:'village',name:'Village Run',len:480},{id:'finish',name:'Finish Line',len:60}];
-const ZNAME={}; for (const z of ZONES) ZNAME[z.id]=z.name;
-let zIdx=0, zEnd=ZONES[0].len, curZone='forest';
+// an endless mountain: zones follow each other at random; the village turns up least often
+const ZONES={forest:{name:'Pine Forest',len:[500,800],w:3},alpine:{name:'Alpine Bowl',len:[400,620],w:2.6},lake:{name:'Frozen River',len:[260,340],w:1.5},village:{name:'Village Run',len:[340,460],w:0.75}};
+const ZNAME={get forest(){return 'Pine Forest';},get alpine(){return 'Alpine Bowl';},get lake(){return 'Frozen River';},get village(){ return themeNow==='christmas'?"Santa's Village":'Village Run'; }};
+let zEnd=600, curZone='forest';
+function nextZone(){ const opts=Object.entries(ZONES).filter(([id])=>id!==curZone); let tot=0; for (const [,z] of opts) tot+=z.w; let r=R()*tot; for (const [id,z] of opts){ r-=z.w; if (r<=0) return id; } return 'forest'; }
 function zoneAt(z){ for (let i=ZSEG.length-1;i>=0;i--) if (z>=ZSEG[i].z0) return ZSEG[i].id; return 'forest'; }
-function zoneTreeMul(z){ const id=zoneAt(z); return id==='alpine'?0.15:id==='village'?0.4:id==='lake'?0:id==='finish'?0.25:1; }
+function zoneTreeMul(z){ const id=zoneAt(z); return id==='alpine'?0.15:id==='village'?0.4:id==='lake'?0:1; }
 const CX0=30*Math.sin(0.5)+14*Math.sin(2)+6*Math.sin(4)+8*Math.sin(1);
 function cx(z){ return 30*Math.sin(z*0.0045+0.5)+14*Math.sin(z*0.011+2)+6*Math.sin(z*0.027+4)+8*Math.sin(z*0.045+1)-CX0; }
 function pathHeading(z){ return Math.atan2(cx(z+2)-cx(z-2),4); }
@@ -500,9 +518,9 @@ function pushSlope(len,target,ramp){ len=Math.round(len); const from=curSl;
   for (let i=0;i<len;i++){ const k=ramp>0?Math.min(1,(i+1)/ramp):1; D.push(D[D.length-1]+from+(target-from)*smooth(k)); }
   curSl=target; genZ+=len; }
 function addFeat(f,z0,z1){ for(let b=Math.floor(z0/10);b<=Math.floor(z1/10);b++){ if(!FB.has(b)) FB.set(b,[]); FB.get(b).push(f); } }
-function addObs(o){ const b=Math.floor(o.z/10); if(!OB.has(b)) OB.set(b,[]); OB.get(b).push(o); }
+function addObs(o){ if (o.path && HAZ.has(o.type) && DIFF.obs<1 && R()>DIFF.obs) return; const b=Math.floor(o.z/10); if(!OB.has(b)) OB.set(b,[]); OB.get(b).push(o); }
 function iceCrack(z,u,len,narrow){ addObs({type:'icecrack',path:true,x:cx(z)+u,z,len,w:rr(0.9,narrow?1.2:1.5),ang:pathHeading(z)+rr(-0.45,0.45),flip:R()<0.5}); }
-function lamps(a,b){ for (let z=a;z<b;z+=rr(26,34)) for (const sd of [-1,1]) addObs({type:'lamp',path:true,x:cx(z)+sd*rr(7.2,8),z:z+rr(-2,2),ry:sd>0?Math.PI:0}); }
+function lamps(a,b){ const xm=themeNow==='christmas'&&curZone==='village'; for (let z=a;z<b;z+=xm?rr(13,17):rr(26,34)) for (const sd of [-1,1]) addObs({type:'lamp',path:true,x:cx(z)+sd*rr(7.2,8),z:z+rr(-2,2),ry:sd>0?Math.PI:0,candy:xm}); }
 function pathTrees(a,b,p){ p*=curZone==='alpine'?0.2:curZone==='village'?0.45:1; for(let z=a;z<b;z+=5) if(R()<p) addObs({type:pick(['pine','pine','birch']),path:true,x:cx(z)+rr(-5.5,5.5),z,s:rr(0.75,1.05),ry:rr(0,6.28)}); }
 function scatterRocks(a,b,p){ for(let z=a;z<b;z+=4) if(R()<p) addObs({type:'rock',path:true,x:cx(z)+rr(-7,7),z:z+rr(-1.5,1.5),s:rr(0.45,1.15),ry:rr(0,6.28)}); }
 const SECS={
@@ -512,16 +530,17 @@ const SECS={
 };
 function nextSection(){
   const z0=genZ, d=Math.min(1,z0/3000);
-  if (z0===0){ pushSlope(110,0.21,1); ZSEG.push({z0:0,id:'forest'}); return; }
-  if (z0>=zEnd){ zIdx=(zIdx+1)%ZONES.length; zEnd=z0+ZONES[zIdx].len; }
-  curZone=ZONES[zIdx].id;
-  if (!ZSEG.length || ZSEG[ZSEG.length-1].id!==curZone) ZSEG.push({z0,id:curZone});
+  if (z0===0){ pushSlope(110,0.21,1); ZSEG.push({z0:0,id:'forest'}); curZone='forest'; zEnd=rr(500,750); return; }
+  if (z0>=zEnd){ curZone=nextZone(); const Lz=ZONES[curZone].len; zEnd=z0+rr(Lz[0],Lz[1]); }
+  if (!ZSEG.length || ZSEG[ZSEG.length-1].id!==curZone){ if (ZSEG.length) ZSEG[ZSEG.length-1].z1=z0; ZSEG.push({z0,id:curZone});
+    if (curZone==='village' && themeNow==='christmas'){ addObs({type:'xarch',path:true,x:cx(z0+14),z:z0+14});   // the gateway into Santa's Village
+      const sd=pick([-1,1]), zw=z0+70; addObs({type:'workshop',path:true,x:cx(zw)+sd*rr(17,20),z:zw,ry:pathHeading(zw)+(sd>0?-1:1)*Math.PI/2}); } }
   let name;
-  if (curZone==='lake') name='lake'; else if (curZone==='finish') name='finish';
+  if (curZone==='lake') name='lake';
   else { const tbl=SECS[curZone]; let tot=0; for(const [,w] of tbl) tot+=w;
     do { let r=R()*tot; for(const [n,w] of tbl){ r-=w; if(r<=0){ name=n; break; } } }
-    while(name===lastSec || (name==='cliff'&&z0<500) || (name==='mega'&&(z0<1000||z0-lastMega<1600)) || (name==='avalanche'&&z0<400) || (name==='santa'&&(themeNow!=='christmas'||z0<250||z0-lastSanta<420))); }
-    if (themeNow==='christmas' && z0-Math.max(lastSanta,0)>1000 && curZone!=='lake' && curZone!=='finish') name='santa';   // Santa turns up at least every kilometre or so
+    while(name===lastSec || DIFF.ban.includes(name) || (name==='cliff'&&z0<500) || (name==='mega'&&(z0<1000||z0-lastMega<1600)) || (name==='avalanche'&&z0<400) || (name==='santa'&&(themeNow!=='christmas'||z0<250||z0-lastSanta<420))); }
+    if (themeNow==='christmas' && z0-Math.max(lastSanta,0)>1000 && curZone!=='lake') name='santa';   // Santa turns up at least every kilometre or so
   lastSec=name;
   switch(name){
     case 'santa': { pushSlope(170,0.26,30); const zs=z0+95, x0=cx(zs)+rr(-2.5,2.5), ry=pathHeading(zs)+rr(-0.5,0.5), site={x:x0,z:zs,ry,gifts:[]}; SANTAS.push(site); lastSanta=zs;
@@ -551,9 +570,6 @@ function nextSection(){
       lamps(z0+10,z0+165); pathTrees(z0+20,z0+160,0.05); break; }
     case 'snowmen': { pushSlope(150,0.29,30); for(let z=z0+20;z<z0+140;z+=rr(9,15)) addObs({type:'snowman',path:true,x:cx(z)+rr(-6,6),z,s:rr(0.85,1.15),ry:rr(0,6.28)});
       lamps(z0+10,z0+145); break; }
-    case 'finish': { pushSlope(80,0.16,20); const zf=z0+30; FINISHES.push({z:zf,done:false}); addObs({type:'banner',path:true,x:cx(zf),z:zf,ry:0});
-      for (const sd of [-1,1]){ for (let k=1;k<6;k++) addObs({type:'flag',path:true,x:cx(zf-k*6)+sd*rr(6.5,7.2),z:zf-k*6}); addObs({type:'lamp',path:true,x:cx(zf+4)+sd*9,z:zf+4,ry:sd>0?Math.PI:0}); }
-      break; }
     case 'cruise': { const L=rr(150,240); pushSlope(L,rr(0.26,0.38),40); scatterRocks(z0+25,z0+L,0.1+0.08*d); pathTrees(z0+30,z0+L,0.09+0.07*d); break; }
     case 'steep': pushSlope(30,0.12,15); pushSlope(rr(80,120),rr(0.6,0.78),14); pushSlope(60,0.3,30); break;
     case 'plunge': { pushSlope(25,0.15,10); const L=rr(150,220); pushSlope(L,rr(0.5,0.64),25); scatterRocks(z0+60,z0+L,0.09+0.06*d); pathTrees(z0+60,z0+L,0.07+0.06*d); pushSlope(40,0.28,20); break; }
@@ -587,6 +603,13 @@ function nextSection(){
     case 'bowl': pushSlope(40,0.62,10); pushSlope(30,-0.25,12); pushSlope(25,0.55,6); pushSlope(30,0.28,12); break;
     case 'uphill': pushSlope(55,-0.05,25); pushSlope(30,0.5,3); pushSlope(50,0.27,20); break;
   }
+  // Hard and Alpine Pro: extra rocks, trees and logs scattered through the run (never on a ramp, creek, Santa stop or the lake)
+  if (DIFF.extra>0 && !['lake','santa','mega','avalanche','road'].includes(name)){ const extraObs=DIFF.obs>1?DIFF.obs:1;
+    for (let z=z0+22; z<genZ-12; z+=4){ if (R()>DIFF.extra) continue; if (FB.get(Math.floor(z/10))?.some(f=>f.type==='ramp'||f.type==='kick'||f.type==='stream'||f.type==='road')) continue;
+      const t=pick(['rock','rock','pine','pine','birch','log']), x=cx(z)+rr(-6.5,6.5)*(curZone==='alpine'&&t!=='rock'?0:1);
+      if (t==='log') addObs({type:'log',path:true,x:cx(z)+rr(-3.5,3.5),z,len:rr(3.5,6),ry:rr(-0.2,0.2)});
+      else if (t==='rock') addObs({type:'rock',path:true,x,z,s:rr(0.5,1.1),ry:rr(0,6.28)});
+      else if (curZone!=='alpine') addObs({type:t,path:true,x,z,s:rr(0.75,1.05),ry:rr(0,6.28)}); void extraObs; } }
 }
 function extendCourse(z){ while(genZ<z) nextSection(); }
 function drop(z){ if(z<=0) return z*0.21; const i=Math.floor(z); if(i+1>=D.length) extendCourse(i+300); return D[i]+(D[i+1]-D[i])*(z-i); }
@@ -975,7 +998,7 @@ const GEO={bare:makeBare(5), birch:makeBirch(7), rock:makeRock(2), log:makeLog()
 const SHARED=new Set([...Object.values(GEO),PINE.wood,PINE.core,PINE.needles,PINE.snow,PINE_L.wood,PINE_L.core,PINE_L.needles,PINE_L.snow]);
 const CORE_MAT=new T.MeshStandardMaterial({vertexColors:true,map:CORE_TEX,roughness:0.95,metalness:0});
 
-/* ---------------- village, lake and finish-line objects ---------------- */
+/* ---------------- village and lake objects ---------------- */
 const PLAIN_MAT=new T.MeshStandardMaterial({vertexColors:true,roughness:0.82,metalness:0});
 const GLOW_MAT=new T.MeshStandardMaterial({color:0x1a1206,emissive:0xffb463,emissiveIntensity:0.5,roughness:0.4});   // lit windows and lamp bulbs
 function poolTex(){ const c=canvas(128,128), g=c.getContext('2d'), gr=g.createRadialGradient(64,64,0,64,64,64); gr.addColorStop(0,'rgba(255,200,140,1)'); gr.addColorStop(0.35,'rgba(255,180,110,.55)'); gr.addColorStop(1,'rgba(255,160,90,0)'); g.fillStyle=gr; g.fillRect(0,0,128,128); return tex(c,true,false); }
@@ -1053,6 +1076,38 @@ function bannerTexture(){ const c=canvas(1024,128), g=c.getContext('2d');
   g.fillStyle='#fff'; g.font='italic 800 64px "Barlow Condensed", Arial Narrow, Arial, sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('F I N I S H',512,66);
   return tex(c,true,false); }
 const BANNER_MAT=new T.MeshStandardMaterial({map:bannerTexture(),roughness:0.7,side:T.DoubleSide});
+/* ---------------- Santa's Village (the village, in the Christmas theme) ---------------- */
+function makeCandyCane(h=2.6,r=0.09){ // red-and-white striped post with a hook
+  const b=builder(), RED=lin('#d0141c'), WH=lin('#f6f2ec'), hook=0.32;
+  const pts=[]; for (let i=0;i<=10;i++) pts.push(new T.Vector3(0,i/10*h,0)); for (let i=1;i<=12;i++){ const a=i/12*Math.PI; pts.push(new T.Vector3(hook-Math.cos(a)*hook,h+Math.sin(a)*hook,0)); }
+  pts.push(new T.Vector3(hook*2,h-0.25,0));
+  const curve=new T.CatmullRomCurve3(pts), g=new T.TubeGeometry(curve,64,r,12,false), uv=g.attributes.uv, P=g.attributes.position, cols=[];
+  const g2=g.toNonIndexed(); g2.computeVertexNormals(); const uv2=g2.attributes.uv;
+  for (let i=0;i<uv2.count;i++){ const t=uv2.getX(i), a=uv2.getY(i); cols.push(((t*curve.getLength()*2.6+a)%1)<0.5?RED:WH); }
+  let k=0; b.add(g2,()=>cols[k++]); void uv; void P; return b.build(); }
+function signTexture(text,bg,fg,w=1024,hgt=200){ const c=canvas(w,hgt), g=c.getContext('2d'); g.fillStyle=bg; g.fillRect(0,0,w,hgt);
+  g.strokeStyle='#f2c04a'; g.lineWidth=12; g.strokeRect(10,10,w-20,hgt-20);
+  g.fillStyle=fg; g.font='800 '+Math.round(hgt*0.5)+'px "Barlow Condensed", Georgia, serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(text,w/2,hgt*0.54); return tex(c,true,false); }
+const XARCH_MAT=new T.MeshStandardMaterial({map:signTexture("SANTA'S VILLAGE",'#b5161e','#fff7e6'),roughness:0.6,side:T.DoubleSide});
+const XARCH_GEO=new T.PlaneGeometry(9,1.75), WSIGN_GEO=new T.PlaneGeometry(5.2,1.0);
+const WSIGN_MAT=new T.MeshStandardMaterial({map:signTexture("SANTA'S WORKSHOP",'#1f5c2e','#fff7e6',1024,200),roughness:0.6,side:T.DoubleSide});
+function makeWorkshop(){ // a big red workshop with a deep snowy roof, glowing windows and a wreath
+  const b=builder(), w=builder(), RED=lin('#9e1b1b'), TRIM=lin('#f1ece2'), GRN=lin('#1f5c2e'), DOOR=lin('#5a2e16');
+  const walls=new T.BoxGeometry(9,4.4,6.4); walls.translate(0,2.2,0); b.add(walls,(x,y,z,nx,ny)=>ny>0.5?SNOWC:(Math.abs(Math.sin(x*3.2))>0.93?[RED[0]*0.7,RED[1]*0.7,RED[2]*0.7]:RED),2,1);
+  for (const sd of [-1,1]){ const r=new T.BoxGeometry(10,0.3,4.3); r.translate(0,0,sd*2.05); r.rotateX(sd*0.62); r.translate(0,6.15,0); b.add(r,(x,y,z,nx,ny)=>ny>0.2?SNOWC:GRN,2,1); }
+  const gable=new T.BufferGeometry(); gable.setAttribute('position',new T.Float32BufferAttribute([-4.5,4.4,3.2, 4.5,4.4,3.2, 0,7.0,3.2, 4.5,4.4,-3.2, -4.5,4.4,-3.2, 0,7.0,-3.2],3)); b.add(gable,()=>RED);
+  const door=new T.BoxGeometry(2.0,2.8,0.1); door.translate(0,1.4,3.22); b.add(door,()=>DOOR);
+  for (const x of [-1.15,1.15]){ const t=new T.BoxGeometry(0.16,3.0,0.14); t.translate(x,1.5,3.24); b.add(t,()=>TRIM); }
+  const lint=new T.BoxGeometry(2.5,0.18,0.14); lint.translate(0,2.95,3.24); b.add(lint,()=>TRIM);
+  for (const x of [-3.1,3.1]){ const wg=new T.BoxGeometry(1.5,1.3,0.06); wg.translate(x,2.2,3.22); w.add(wg,()=>[1,1,1]); const fr=new T.BoxGeometry(1.7,0.12,0.14); fr.translate(x,1.5,3.26); b.add(fr,()=>TRIM); }
+  for (const z of [-1.8,1.8]) for (const sd of [-1,1]){ const wg=new T.BoxGeometry(0.06,1.3,1.4); wg.translate(sd*4.52,2.2,z); w.add(wg,()=>[1,1,1]); }
+  const ch=new T.BoxGeometry(0.9,2.4,0.9); ch.translate(2.6,6.6,-1.2); b.add(ch,(x,y,z,nx,ny)=>ny>0.5?SNOWC:lin('#7c3a2a'));
+  const wr=new T.TorusGeometry(0.42,0.13,8,20); wr.translate(0,3.6,3.3); b.add(wr,()=>GRN);
+  return {body:b.build(),win:w.build()}; }
+const CANDY=makeCandyCane(), WORKSHOP=makeWorkshop();
+// bulb positions along a cabin's eaves and ridge, in the cabin's own frame
+const CABIN_BULBS=(()=>{ const a=[]; for (let x=-2.9;x<=2.91;x+=0.42){ a.push([x,2.72,2.4],[x,2.72,-2.4],[x,4.46,0]); } return a; })();
+const WORK_BULBS=(()=>{ const a=[]; for (let x=-4.8;x<=4.81;x+=0.45){ a.push([x,4.6,3.75],[x,4.6,-3.75],[x,7.1,0]); } return a; })();
 const BANNER_GEO=new T.PlaneGeometry(14.4,1.8);
 try { document.fonts.load('italic 800 64px "Barlow Condensed"').then(()=>{ const old=BANNER_MAT.map; BANNER_MAT.map=bannerTexture(); BANNER_MAT.needsUpdate=true; old.dispose(); }).catch(()=>{}); } catch(e){}
 function iceCrackTexture(){ // open water in a jagged split, rimmed with broken white ice, tapering to hairline cracks
@@ -1102,7 +1157,8 @@ function decorateTrees(list,group,r){ // a spiral of bulbs, a few dozen ornament
 const CABIN=makeCabin(), LAMP=makeLamp();
 Object.assign(GEO,{cabinBody:CABIN.body,cabinWin:CABIN.win,fence:makeFence(),snowman:makeSnowman(),shantyR:makeShanty('#a8322a'),shantyB:makeShanty('#2f5d8a'),shantyG:makeShanty('#3e6b3a'),lampBody:LAMP.body,lampBulb:LAMP.bulb,sign:makeSign(),
   bannerPost:(()=>{ const b=builder(); for (const x of [-7.4,7.4]){ const p=new T.CylinderGeometry(0.12,0.14,5.2,10); p.translate(x,2.6,0); b.add(p,()=>lin('#d8d2c8')); } return b.build(); })()});
-for (const g of Object.values(GEO)) SHARED.add(g); SHARED.add(BANNER_GEO); SHARED.add(POOL_GEO);
+Object.assign(GEO,{candy:CANDY,workBody:WORKSHOP.body,workWin:WORKSHOP.win});
+for (const g of Object.values(GEO)) SHARED.add(g); SHARED.add(BANNER_GEO); SHARED.add(POOL_GEO); SHARED.add(XARCH_GEO); SHARED.add(WSIGN_GEO);
 
 /* ---------------- terrain chunks ---------------- */
 const CH=50, ROW=0.75;
@@ -1131,14 +1187,14 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   const z0=k*CH; extendCourse(z0+CH+400);
   const q=QUALITY[qi], group=new T.Group(), det=[], lite=[];
   // 1) forest placement
-  const rng=mulberry(k*7919+3), L={pineN:[],pineF:[],bareN:[],bareF:[],birchN:[],birchF:[],rock:[],log:[],flag:[],cabin:[],fence:[],snowman:[],shanty:[],lamp:[],sign:[],banner:[],icecrack:[]}, occ=[];
+  const rng=mulberry(k*7919+3), L={pineN:[],pineF:[],bareN:[],bareF:[],birchN:[],birchF:[],rock:[],log:[],flag:[],cabin:[],fence:[],snowman:[],shanty:[],lamp:[],sign:[],banner:[],icecrack:[],xarch:[],workshop:[]}, occ=[];
   let zrow=0;
   for (let z=z0+rng()*2; z<z0+CH; z+=3.4){ if (++zrow%5===0) yield; const c0=cx(z), zid=zoneAt(z), tm=zoneTreeMul(z);
     for (let u=-82; u<82; u+=Math.abs(u)<40?3.4:6){
-      const au=Math.abs(u); let p=au<6.5?0:au<9?0.15:au<14?0.36:au<40?0.5:0.56; const roll=rng(), farRoll=rng();
+      const au=Math.abs(u); let p=au<DIFF.lane?0:au<9?0.15*DIFF.edge:au<14?Math.min(0.75,0.36*DIFF.edge):au<40?0.5:0.56; const roll=rng(), farRoll=rng();
       if (zid==='lake') p=au<48?0:p; else if (au<40) p*=tm; else p*=Math.min(1,tm*2.5);
       if (zid==='alpine' && au>8 && au<60 && roll<0.035){ const x=c0+u+(rng()-0.5)*2.6, zz=z+(rng()-0.5)*2.6, bs=1.6+rng()*2.4, bo={type:'rock',x,z:zz,s:bs,ry:rng()*6.28}; addObs(bo); L.rock.push(bo); occ.push([x,zz,1.3*bs,0.32]); continue; }
-      if (zid==='village' && au>20 && au<62 && roll<0.03 && farRoll<q.far+0.2){ const x=c0+u, zz=z+(rng()-0.5)*2, co={type:'cabin',x,z:zz,ry:pathHeading(zz)+(u>0?-1:1)*Math.PI/2+(rng()-0.5)*0.6,s:0.9+rng()*0.3}; addObs(co); L.cabin.push(co); occ.push([x,zz,4,0.4]); continue; }
+      if (zid==='village' && au>20 && au<62 && roll<(themeNow==='christmas'?0.05:0.03) && farRoll<q.far+0.2){ const x=c0+u, zz=z+(rng()-0.5)*2, co={type:'cabin',x,z:zz,ry:pathHeading(zz)+(u>0?-1:1)*Math.PI/2+(rng()-0.5)*0.6,s:0.9+rng()*0.3}; addObs(co); L.cabin.push(co); occ.push([x,zz,4,0.4]); continue; }
       if (roll>=p) continue; if (au>=26 && farRoll>q.far) continue;
       const x=c0+u+(rng()-0.5)*2.6, zz=z+(rng()-0.5)*2.6; if (streamAt(zz,6) && au<30) continue;
       if (au>8 && au<34 && rng()<0.05){ const bs=1.4+rng()*1.6, bo={type:'rock',x,z:zz,s:bs,ry:rng()*6.28}; addObs(bo); L.rock.push(bo); occ.push([x,zz,1.3*bs,0.32]); continue; }
@@ -1205,7 +1261,7 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   inst(L.pineN,PINE.wood,OBJ_MAT,sh,null,det,treeP); inst(L.pineN,PINE.needles,NEEDLE_MAT,sh,NEEDLE_DEPTH,det,treeP); inst(L.pineN,PINE.snow,BSNOW_MAT,false,null,det,treeP);
   inst(L.pineN,PINE_L.wood,OBJ_MAT,sh,null,lite,treeP); inst(L.pineN,PINE_L.needles,NEEDLE_MAT_L,sh,NEEDLE_DEPTH,lite,treeP); inst(L.pineN,PINE_L.snow,BSNOW_MAT_L,false,null,lite,treeP);
   yield;
-  if (themeNow==='christmas' && L.pineN.length){ const dr=mulberry(k*977+5), dec=L.pineN.filter(o=>{ const au=Math.abs(o.x-cx(o.z)); return au<24 && dr()<(au<14?0.22:0.12); });
+  if (themeNow==='christmas' && L.pineN.length){ const dr=mulberry(k*977+5), dec=L.pineN.filter(o=>{ const au=Math.abs(o.x-cx(o.z)); return au<24 && dr()<(zoneAt(o.z)==='village'?0.7:au<14?0.22:0.12); });
     if (!dec.length){ const near=L.pineN.filter(o=>Math.abs(o.x-cx(o.z))<30); if (near.length) dec.push(near[(dr()*near.length)|0]); } decorateTrees(dec,group,dr); }
   inst(L.pineN,PINE.core,CORE_MAT,sh,null,det,treeP); inst(L.pineN,PINE_L.core,CORE_MAT,sh,null,lite,treeP); inst(L.pineF,PINE_L.core,CORE_MAT,false,null,null,treeP);
   inst(L.pineF,PINE_L.wood,OBJ_MAT,false,null,null,treeP); inst(L.pineF,PINE_L.needles,NEEDLE_MAT_L,false,null,null,treeP); inst(L.pineF,PINE_L.snow,BSNOW_MAT_L,false,null,null,treeP);
@@ -1219,9 +1275,20 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   const flatP=(yo,sc)=>o=>{ tmpQ.setFromAxisAngle(UP,o.ry||0); const s=sc?o.s||1:1; tmpS.set(s,s,s); tmpV.set(o.x,height(o.x,o.z)+yo,o.z); };
   const lowP=o=>{ let m=1e9; for (const [dx,dz] of [[2.6,2.1],[-2.6,2.1],[2.6,-2.1],[-2.6,-2.1],[0,0]]) m=Math.min(m,height(o.x+dx*(o.s||1),o.z+dz*(o.s||1))); tmpQ.setFromAxisAngle(UP,o.ry||0); tmpS.set(o.s||1,o.s||1,o.s||1); tmpV.set(o.x,m-0.15,o.z); };
   inst(L.cabin,GEO.cabinBody,OBJ_MAT,sh,null,null,lowP); inst(L.cabin,GEO.cabinWin,GLOW_MAT,false,null,null,lowP);
+  inst(L.workshop,GEO.workBody,PLAIN_MAT,sh,null,null,lowP); inst(L.workshop,GEO.workWin,GLOW_MAT,false,null,null,lowP);
+  if (themeNow==='christmas'){ // Santa's Village: lights on every roof
+    const bA=[], bB=[], M4=new T.Matrix4(), V3=new T.Vector3();
+    const addB=(list,B)=>{ for (const o of list){ if (zoneAt(o.z)!=='village') continue; lowP(o); M4.compose(tmpV,tmpQ,tmpS); B.forEach((p,i)=>{ V3.set(p[0],p[1],p[2]).applyMatrix4(M4); (i%2?bB:bA).push([V3.clone(),XCOLS[i%XCOLS.length]]); }); } };
+    addB(L.cabin,CABIN_BULBS); addB(L.workshop,WORK_BULBS);
+    for (const [arr,mat] of [[bA,XL_A],[bB,XL_B]]) if (arr.length){ const m=new T.InstancedMesh(XL_GEO,mat,arr.length); m.frustumCulled=false; arr.forEach((e,i)=>{ M4.compose(e[0],tmpQ.identity(),tmpS.set(1.2,1.2,1.2)); m.setMatrixAt(i,M4); m.setColorAt(i,e[1]); }); m.instanceMatrix.needsUpdate=true; m.instanceColor.needsUpdate=true; group.add(m); } }
+  for (const o of L.workshop){ lowP(o); const sg=new T.Mesh(WSIGN_GEO,WSIGN_MAT); sg.position.set(0,5.2,3.4).applyQuaternion(tmpQ).add(tmpV); sg.quaternion.copy(tmpQ); group.add(sg); }
+  for (const o of L.xarch){ const hd=pathHeading(o.z), yL=height(o.x-Math.cos(hd)*4.6,o.z+Math.sin(hd)*4.6), yR=height(o.x+Math.cos(hd)*4.6,o.z-Math.sin(hd)*4.6), y0=Math.min(yL,yR);
+    for (const sd of [-1,1]){ const c=new T.Mesh(GEO.candy,PLAIN_MAT); c.scale.setScalar(1.75); c.position.set(o.x+Math.cos(hd)*sd*4.6,(sd<0?yL:yR)-0.1,o.z-Math.sin(hd)*sd*4.6); c.rotation.y=hd+(sd>0?Math.PI:0); c.castShadow=sh; group.add(c); }
+    const bd=new T.Mesh(XARCH_GEO,XARCH_MAT); bd.position.set(o.x,y0+4.25,o.z); bd.rotation.y=hd+Math.PI; bd.castShadow=sh; group.add(bd); }
   inst(L.fence,GEO.fence,OBJ_MAT,sh,null,null,o=>{ tmpQ.setFromAxisAngle(UP,pathHeading(o.z)+o.ry); tmpS.set(1,1,1); tmpV.set(o.x,height(o.x,o.z)+powDisp(o.x,o.z)*0.6-0.05,o.z); });
   if (L.snowman.length){ const before=group.children.length; inst(L.snowman,GEO.snowman,PLAIN_MAT,sh,null,null,flatP(-0.05,true)); const m=group.children[before]; if (m) L.snowman.forEach((o,i)=>{ o.im=m; o.ii=i; }); }
   for (const [v,list] of [['shantyR',L.shanty.filter((o,i)=>i%3===0)],['shantyB',L.shanty.filter((o,i)=>i%3===1)],['shantyG',L.shanty.filter((o,i)=>i%3===2)]]) inst(list,GEO[v],OBJ_MAT,sh,null,null,flatP(-0.05,false));
+  const candyL=L.lamp.filter(o=>o.candy); L.lamp=L.lamp.filter(o=>!o.candy); inst(candyL,GEO.candy,PLAIN_MAT,sh,null,null,flatP(-0.05,false));
   inst(L.lamp,GEO.lampBody,PLAIN_MAT,sh,null,null,flatP(-0.05,false)); inst(L.lamp,GEO.lampBulb,GLOW_MAT,false,null,null,flatP(-0.05,false));
   inst(L.lamp,POOL_GEO,POOL_MAT,false,null,null,o=>{ const lx=o.x+Math.cos(o.ry||0)*0.85, lz=o.z-Math.sin(o.ry||0)*0.85; normalAt(lx,lz,tmpV); tmpQ.setFromUnitVectors(UP,tmpV); tmpS.set(1,1,1); tmpV.set(lx,height(lx,lz)+0.06,lz); });
   inst(L.sign,GEO.sign,PLAIN_MAT,sh,null,null,o=>{ tmpQ.setFromAxisAngle(UP,pathHeading(o.z)+Math.PI); tmpS.set(1,1,1); tmpV.set(o.x,height(o.x,o.z)-0.05,o.z); });
@@ -1248,7 +1315,7 @@ function updateChunks(all){
   for (const k of [...chunks.keys()]) if (k<kc-2||k>kc+10) disposeChunk(k,false);
 }
 function newCourse(){ building=null; for (const k of [...chunks.keys()]) disposeChunk(k,false); buildQueue.length=0; D.length=1; D[0]=0; genZ=0; curSl=0.2; lastSec=''; lastMega=-1e9;
-  FB.clear(); FRESH_C.clear(); if (typeof clearTracks==='function') clearTracks(); OB.clear(); ICE.length=0; STREAMS.length=0; MEGAS.length=0; AVAL.length=0; FINISHES.length=0; ROADS.length=0; ZSEG.length=0; SANTAS.length=0; lastSanta=-1e9; zIdx=0; zEnd=ZONES[0].len; curZone='forest'; extendCourse(1200); }
+  FB.clear(); FRESH_C.clear(); if (typeof clearTracks==='function') clearTracks(); OB.clear(); ICE.length=0; STREAMS.length=0; MEGAS.length=0; AVAL.length=0; FINISHES.length=0; ROADS.length=0; ZSEG.length=0; SANTAS.length=0; lastSanta=-1e9; zEnd=600; curZone='forest'; extendCourse(1200); }
 function rebuildChunks(){ building=null; for (const k of [...chunks.keys()]) disposeChunk(k,true); buildQueue.length=0; updateChunks(true); }
 const frustum=new T.Frustum(), projM=new T.Matrix4();
 function cullChunks(){
@@ -1793,14 +1860,14 @@ const yeti=(function(){
   return {g,head,limbs,active:false,u:0,z:0,side:1,sp:8.5,phase:0,lastStep:0,nm:false,next:380,mode:'cross',count:0,t:0,roarT:0};
 })();
 function spawnYeti(){
-  const sp=speedNow(), d=Math.min(1,pz/4000), chase=yeti.count%2===1 && pz-startZ>700 && !avNow && zoneAt(pz)!=='finish';
+  const sp=speedNow(), d=Math.min(1,pz/4000), chase=yeti.count%2===1 && pz-startZ>700 && !avNow && !DIFF.calm;
   yeti.count++;
   if (chase){ yeti.mode='chase'; yeti.z=pz-55; yeti.u=px-cx(pz); yeti.sp=Math.max(13,sp*0.9); yeti.t=0; yeti.roarT=2.5; yeti.phase=0; yeti.nm=true; yeti.active=true; yeti.g.visible=true;
-    yeti.next=pz+rr(800,1200)-d*300; sfx('roar',1.1); setTimeout(()=>{ if(state==='play') toast('The <em>yeti</em> is chasing you!',true); },400); return; }
+    yeti.next=pz+(rr(800,1200)-d*300)/DIFF.yeti; sfx('roar',1.1); setTimeout(()=>{ if(state==='play') toast('The <em>yeti</em> is chasing you!',true); },400); return; }
   const t=rr(2.5,3.0), zc=pz+Math.max(30,sp*t);
   if (streamAt(zc,12) || MEGAS.some(m=>Math.abs(m.z-zc)<150) || zoneAt(zc)==='lake') { yeti.next=pz+60; yeti.count--; return; }
   yeti.mode='cross'; yeti.side=pick([-1,1]); yeti.sp=rr(8,9.5); yeti.u=yeti.side*yeti.sp*t; yeti.z=zc; yeti.phase=0; yeti.nm=false; yeti.active=true; yeti.g.visible=true;
-  yeti.next=pz+rr(700,1100)-d*350;
+  yeti.next=pz+(rr(700,1100)-d*350)/DIFF.yeti;
   sfx('roar',1); setTimeout(()=>{ if(state==='play') toast('<em>Yeti!</em>',true); },500);
 }
 function updateYeti(dt){
@@ -1936,8 +2003,8 @@ function updateTeam(dt){
 }   // Rudolph's nose lights up the snow around him
 let critNext=420;
 function spawnCritters(){
-  const sp=speedNow(), zid=zoneAt(pz+60); critNext=pz+rr(420,700)*(themeNow==='christmas'?0.8:1);
-  if (zid==='lake'||zid==='finish'||avNow||yeti.active) return;
+  const sp=speedNow(), zid=zoneAt(pz+60); critNext=pz+rr(420,700)*(themeNow==='christmas'?0.8:1)/DIFF.crit;
+  if (zid==='lake'||avNow||yeti.active) return;
   const t=rr(2.2,2.8), zc=pz+Math.max(35,sp*t);
   if (streamAt(zc,10) || MEGAS.some(m=>Math.abs(m.z-zc)<120) || SANTAS.some(q=>Math.abs(q.z-zc)<40)) return;
   const side=pick([-1,1]), xmas=themeNow==='christmas', roll=R();
@@ -1945,7 +2012,7 @@ function spawnCritters(){
     setTimeout(()=>{ if(state==='play') toast(msg,true); },300); };
   const herd=(kind,n,s0,s1,gap)=>{ const pool=critters.filter(c=>c.kind===kind);
     for (let i=0;i<Math.min(n,pool.length);i++){ const d=pool[i]; Object.assign(d,{active:true,side,sp:rr(s0,s1),z:zc+i*rr(1,2.2)-2,phase:i*1.3,pause:0,paused:false,nm:false}); d.u=side*(d.sp*t*0.95+i*gap); d.g.visible=true; } };
-  if (xmas){
+  if (xmas){ if (zid==='village' && roll<0.6){ herd('elf',2+((R()*3)|0),4.2,5.2,1.5); setTimeout(()=>{ if(state==='play') toast('<em>Elves</em> crossing!'); },300); return; }
     if (roll<0.3){ const r=critters.find(c=>c.kind==='rudolph'); if (!r.active) stopper(r,3,"<em>Rudolph!</em> Don't stare at the nose"); }
     else if (roll<0.65) herd('reindeer',2+((R()*3)|0),7,8.5,2.6);
     else { herd('elf',2+((R()*2)|0),4.2,5.2,1.5); setTimeout(()=>{ if(state==='play') toast('<em>Elves</em> crossing!'); },300); }
@@ -2526,11 +2593,10 @@ function takeoff(){ const sp=speedNow(); sPitch=groundPitch(px,pz,heading); sRol
 let pred=null;
 function airControl(dt,steer,tuckKey){ // keys set how fast you rotate; hands-off, the sled eases toward the slope you're about to land on
   pred=predictLanding();
-  const trick=trickIn(), hands=handsIn();
-  handsUp+=((hands?1:0)-handsUp)*Math.min(1,dt*8); if (handsUp>0.6) noHandsT+=dt;
+  const trick=trickIn(); handsUp=0;
   const ctl=1-handsUp*0.5, assist=1-handsUp*0.65;   // with your hands off the rope you can't steer the sled as well
-  const pRaw=clamp(((keys.ArrowUp||keys.KeyW)?-1:0)+(tuckKey?1:0)+padPitch,-1,1), rRaw=clamp(steer,-1,1);
-  const pIn=trick?0:pRaw*ctl, rIn=trick?0:rRaw*ctl;
+  const pRaw=trick?clamp(((keys.ArrowUp||keys.KeyW)?-1:0)+(tuckKey?1:0)+padPitch,-1,1):0, rRaw=clamp(steer,-1,1);   // ↑/↓ only flip while Shift is held; otherwise the sled keeps itself level
+  const pIn=0, rIn=trick?0:rRaw*ctl;
   const wantP=pIn*1.3+(pred.gp-sPitch)*(pIn?0.6:1.9)*assist, wantR=rIn*1.15+(pred.gr-sRoll)*(rIn?0.5:1.7)*assist;
   pitchRate+=(wantP-pitchRate)*Math.min(1,dt*6); rollRate+=(wantR-rollRate)*Math.min(1,dt*6);
   sPitch=clamp(sPitch+pitchRate*dt,-1.5,1.5); sRoll=clamp(sRoll+rollRate*dt,-1.4,1.4);
@@ -2552,9 +2618,8 @@ function scoreLanding(at,sketchy){
   const nS=Math.round(Math.abs(spinTot)/TAU), nF=Math.round(Math.abs(flipTot)/TAU);
   if (nS>0){ pts+=[0,500,1200,2200,3500,5000][Math.min(5,nS)]; parts.push((nS*360)+(SLED.form==='saucer'&&nS>1?' helicopter':' spin')); trick=true; }
   if (nF>0){ const back=flipTot>0; pts+=nF*(back?1000:1200); parts.push((nF===2?'Double ':nF>=3?'Triple ':'')+(back?'backflip':'frontflip')); trick=true; }
-  if (noHandsT>0.35 && handsUp<0.5){ pts+=Math.round(noHandsT*600); parts.push('No hands'); trick=true; }
   if (at>0.9){ pts+=Math.round((at-0.6)*180); if (at>2) parts.push('Big air'); else if (!parts.length) parts.push(at.toFixed(1)+'s air'); }
-  RUN.flips+=nF; RUN.spins+=nS; if (nS>=2) RUN.spin720=1; if (parts.includes('No hands')) RUN.hands++; if (at>2) RUN.bigAir++;
+  RUN.flips+=nF; RUN.spins+=nS; if (nS>=2) RUN.spin720=1; if (at>2) RUN.bigAir++;
   if (pts>0){ if (trick && SLED.pts!==1) pts=Math.round(pts*SLED.pts); if (sketchy) pts=Math.round(pts*0.5); comboAdd(pts,(sketchy?'Sketchy · ':'')+parts.join(' + ')); }
   return trick; }
 function predictLanding(){ let x=px,y=py,z=pz,uy=vy; const ux=vx, uz=vz;
@@ -2568,7 +2633,7 @@ function landed(hit,at){
   if (judged && invuln<=0){ let why=null;
     if (hit>18*tol+SURF.hit) why='Came down way too hard'; else if (se>2.2*tol) why='Landed backwards'; else if (se>1.05*tol) why='Over-rotated the spin';
     else if (dp<-1.0*tol) why=nFlipDone()?'Under-rotated the flip':'Landed nose-first'; else if (dp>1.0*tol) why=nFlipDone()?'Over-rotated the flip':'Landed nose-high';
-    else if (Math.abs(dr)>0.85*tol) why='Landed on its side'; else if (dy>1.35*tol) why='Landed sideways'; else if (handsUp>0.5 && hit>7) why='Landed with no hands';
+    else if (Math.abs(dr)>0.85*tol) why='Landed on its side'; else if (dy>1.35*tol) why='Landed sideways';
     if (why){ landingPuff(1.4); faceSnow(1); crash(why); return; } }
   if (at>0.25||hit>2.5) landingPuff(str*(SURF.spray>1?1.2:1));
   const sketchy=judged&&(Math.abs(dp)>0.52*tol||Math.abs(dr)>0.46*tol||dy>0.75*tol||se>0.5*tol||handsUp>0.5);
@@ -2624,6 +2689,7 @@ function collide(){
         continue; }
       if (o.type==='fence'){ const h=pathHeading(o.z)+o.ry, ca=Math.cos(h), sa=Math.sin(h), along=dx*ca-dz*sa, across=dx*sa+dz*ca;
         if (Math.abs(along)<1.55 && Math.abs(across)<0.35 && hAbove<1.05 && invuln<=0){ if (SLED.bumper==='mega'){ if (!o.bumped) bumpOver(o,'Fence hop'); continue; } crash('Hit a fence'); return; } continue; }
+      if (o.type==='xarch'){ const h=pathHeading(o.z); for (const sd of [-4.6,4.6]){ if (Math.hypot(px-(o.x+Math.cos(h)*sd),pz-(o.z-Math.sin(h)*sd))<0.45 && invuln<=0){ crash('Hit a giant candy cane'); return; } } continue; }
       if (o.type==='banner'){ const h=pathHeading(o.z); for (const sd of [-7.4,7.4]){ if (Math.hypot(px-(o.x+Math.cos(h)*sd),pz-(o.z-Math.sin(h)*sd))<0.45 && invuln<=0){ crash('Hit the finish post'); return; } } continue; }
       const d=Math.hypot(dx,dz);
       if (o.type==='rock'){ if (d<o.s*0.95+0.25 && hAbove<o.s*0.7 && invuln<=0){ if (SLED.bumper && (SLED.bumper==='mega'||o.s<0.9)){ if (!o.bumped) bumpOver(o,'Rock bounce'); continue; } crash('Hit a rock'); return; } continue; }
@@ -2631,8 +2697,8 @@ function collide(){
           const gy=height(o.x,o.z); for (let k=0;k<40;k++){ const a=R()*6.28; emitChunk(o.x+rr(-0.3,0.3),gy+rr(0.3,1.7)*o.s,o.z+rr(-0.3,0.3),vx*0.7+Math.cos(a)*rr(1,3),rr(1,4),vz*0.7+Math.sin(a)*rr(1,3),1,0.4,[0.03,0.1]); }
           emit(o.x,gy+1,o.z,vx*0.5,1.5,vz*0.5,60,1.6,{size:[0.15,0.4],life:[0.6,1.3],g:2,drag:1.5,kind:0}); faceSnow(0.55); sfx('smash',1); vx*=0.85; vz*=0.85; joltV-=1.5; comboAdd(250,'Snowman smash'); }
         continue; }
-      if (o.type==='cabin'||o.type==='shanty'||o.type==='lamp'||o.type==='sign'){ const r=o.type==='cabin'?3.0*(o.s||1):o.type==='shanty'?1.45:0.32;
-        if (d<r && hAbove<(o.type==='cabin'?4:2.6) && invuln<=0){ crash(o.type==='cabin'?'Crashed into a cabin':o.type==='shanty'?'Hit an ice shanty':o.type==='lamp'?'Hit a lamp post':'Hit a sign'); return; } continue; }
+      if (o.type==='cabin'||o.type==='workshop'||o.type==='shanty'||o.type==='lamp'||o.type==='sign'){ const r=o.type==='cabin'?3.0*(o.s||1):o.type==='workshop'?4.8:o.type==='shanty'?1.45:0.32;
+        if (d<r && hAbove<(o.type==='cabin'||o.type==='workshop'?6:2.6) && invuln<=0){ crash(o.type==='cabin'?'Crashed into a cabin':o.type==='workshop'?"Crashed into Santa's workshop":o.type==='shanty'?'Hit an ice shanty':o.type==='lamp'?(o.candy?'Hit a candy cane':'Hit a lamp post'):'Hit a sign'); return; } continue; }
       const trunk=0.3*o.s+0.4;
       if (d<trunk && invuln<=0 && sp>2.5){ crash('Hit a tree'); return; }
       if (d<trunk && sp<=2.5){ vx*=-0.2; vz*=-0.2; continue; }
@@ -2683,7 +2749,7 @@ const keys={}; let padSteer=0, padPitch=0, padBrake=false, padTuck=false, padTri
 function pollPad(){
   padSteer=0; padPitch=0; padBrake=false; padTuck=false; padTrick=false; padHands=false; padLook=false; let pads=[]; try{ pads=navigator.getGamepads?navigator.getGamepads():[]; }catch(e){ return; }
   for (const gp of pads){ if(!gp) continue; const ax=gp.axes[0]||0; padSteer=Math.abs(ax)>0.15?ax:(gp.buttons[14]?.pressed?-1:gp.buttons[15]?.pressed?1:0);
-    padTrick=!!(gp.buttons[4]?.pressed||gp.buttons[5]?.pressed); padHands=!!gp.buttons[3]?.pressed; padLook=!!gp.buttons[10]?.pressed||!!gp.buttons[11]?.pressed;
+    padTrick=!!(gp.buttons[4]?.pressed||gp.buttons[5]?.pressed); padLook=!!gp.buttons[10]?.pressed||!!gp.buttons[11]?.pressed;
     padBrake=!!(gp.buttons[1]?.pressed||gp.buttons[6]?.pressed); padTuck=!!(gp.buttons[2]?.pressed||gp.buttons[7]?.pressed||gp.buttons[13]?.pressed||(gp.axes[1]||0)>0.6);
     const jb=!!(gp.buttons[0]?.pressed||(gp.buttons[12]?.pressed&&onGround)); padPitch=Math.abs(gp.axes[1]||0)>0.2?gp.axes[1]:0; if (jb&&!padJumpWas){ if(state==='play') hopReq=0.15; else if((state==='title'||state==='over')&&$('garage').hidden&&$('settings').hidden){ if (state==='title') wizardNext(); else if (!$('startBtn').disabled) startGame(); } } padJumpWas=jb;
     const st=!!gp.buttons[9]?.pressed; if(st&&!padStartWas) togglePause(); padStartWas=st; break; }
@@ -2692,7 +2758,6 @@ const steerIn=()=>clamp((keys.ArrowLeft||keys.KeyA?1:0)-(keys.ArrowRight||keys.K
 const brakeIn=()=>!!(keys.ShiftLeft||keys.ShiftRight||padBrake);
 const tuckIn=()=>!!(keys.ArrowDown||keys.KeyS||padTuck);
 const trickIn=()=>!!(keys.ShiftLeft||keys.ShiftRight||padTrick);
-const handsIn=()=>!!(keys.KeyG||padHands);
 const lookIn=()=>!!(keys.KeyC||padLook);
 function toggleFullscreen(){ try{ if(document.fullscreenElement) document.exitFullscreen(); else $('app').requestFullscreen().catch(()=>{}); }catch(e){} }
 addEventListener('keydown',e=>{
@@ -2700,7 +2765,7 @@ addEventListener('keydown',e=>{
   if (!$('settings').hidden){ if (e.code==='Escape'){ e.preventDefault(); closeSettings(); } return; }
   if (e.code==='KeyV' && !e.repeat){ SETTINGS.chase=!SETTINGS.chase; saveSettings(); if (state==='play') toast(SETTINGS.chase?'Chase view':'Rider view'); }
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)&&(state==='play'||state==='crash')) e.preventDefault();
-  keys[e.code]=true; if (e.repeat) return;
+  keys[e.code]=true; if ((e.code==='ShiftLeft'||e.code==='ShiftRight')&&!e.shiftKey) keys[e.code]=false; if (e.repeat) return;
   if (state==='play' && (e.code==='Space' || ((e.code==='ArrowUp'||e.code==='KeyW') && onGround))) hopReq=0.15;
   if (e.code==='KeyP'||e.code==='Escape') togglePause();
   if (e.code==='KeyF') toggleFullscreen();
@@ -2711,13 +2776,18 @@ addEventListener('keydown',e=>{
   if (e.code==='KeyO'){ setGoggles(!SETTINGS.goggles); if (state==='play') toast(SETTINGS.goggles?'Goggles on':'Goggles off'); }
   if ((e.code==='Enter'||e.code==='NumpadEnter')&&(state==='title'||state==='over')&&!(document.activeElement&&document.activeElement.tagName==='BUTTON')){ e.preventDefault(); if (state==='title') wizardNext(); else if (!$('startBtn').disabled) startGame(); }
 });
-addEventListener('keyup',e=>{ keys[e.code]=false; });
-addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; if(state==='play'||state==='crash') togglePause(); });
+addEventListener('keyup',e=>{ keys[e.code]=false; if (!e.shiftKey){ keys.ShiftLeft=keys.ShiftRight=false; } });
+// Shift must never latch: every key and mouse event says whether it's really down, so a missed key-up can't leave you stuck in trick mode
+const syncShift=e=>{ if (!e.shiftKey){ keys.ShiftLeft=false; keys.ShiftRight=false; } };
+addEventListener('keydown',syncShift,true); addEventListener('pointermove',syncShift,true); addEventListener('pointerdown',syncShift,true);
+const clearKeys=()=>{ for(const k in keys) keys[k]=false; };
+addEventListener('blur',()=>{ clearKeys(); if(state==='play'||state==='crash') togglePause(); });
+document.addEventListener('visibilitychange',()=>{ if (document.hidden) clearKeys(); });
 
 /* ---------------- UI ---------------- */
 const fmt=n=>Math.floor(n).toLocaleString('en-US');
-function renderPips(){ [...$('pips').children].forEach((el,i)=>el.classList.toggle('gone',i<crashes)); }
-let toastTimer=0, alarmUntil=0; function toast(html,alarm){ const now=performance.now(); if (!alarm && now<alarmUntil) return; if (alarm) alarmUntil=now+1500; const t=$('toast'); t.innerHTML=html; t.classList.toggle('alarm',!!alarm); t.classList.add('on'); lastToast=time; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'),alarm?1700:1300); }
+function renderPips(){ const pp=$('pips'); if (pp.children.length!==DIFF.lives) pp.innerHTML='<i></i>'.repeat(DIFF.lives); [...pp.children].forEach((el,i)=>el.classList.toggle('gone',i<crashes)); }
+let toastTimer=0, alarmUntil=0; function toast(html,alarm){ const now=performance.now(); if (typeof XR!=='undefined'&&XR.on) xrMsg(html); if (!alarm && now<alarmUntil) return; if (alarm) alarmUntil=now+1500; const t=$('toast'); t.innerHTML=html; t.classList.toggle('alarm',!!alarm); t.classList.add('on'); lastToast=time; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'),alarm?1700:1300); }
 let fpsAcc=0, fpsN=0, autoTuned=false, keysT=0, runLive=false, lastEarned=0;
 try { autoTuned=localStorage.getItem('sledQuality')!==null; } catch(e){}
 function clearHazards(){ noseLight.intensity=0; $('glare').style.opacity='0'; yeti.active=false; yeti.g.visible=false; for (const c of critters){ c.active=false; c.g.visible=false; } for (const a of AVAL) a.done=true; avNow=null; clearCracks(); $('chase').hidden=true; $('gauge').hidden=true; }
@@ -2750,7 +2820,7 @@ function clearTracks(){ for (const t of tracks){ scene.remove(t.m); t.m.geometry
 function updatePowderFx(dt){
   if (surfNow!=='powder'){ if (tracks.length) clearTracks(); return; }
   // animal tracks wander across the course ahead every so often
-  if (pz+160>trackNext){ const zt=trackNext; trackNext+=rr(110,220); const zid=zoneAt(zt); if (zid!=='lake'&&zid!=='finish'&&zid!=='village'&&!freshFeats(Math.floor(zt/10)).length) buildTrack(zt); }
+  if (pz+160>trackNext){ const zt=trackNext; trackNext+=rr(110,220); const zid=zoneAt(zt); if (zid!=='lake'&&zid!=='village'&&!freshFeats(Math.floor(zt/10)).length) buildTrack(zt); }
   for (let i=tracks.length-1;i>=0;i--) if (tracks[i].z<pz-60){ scene.remove(tracks[i].m); tracks[i].m.geometry.dispose(); tracks.splice(i,1); }
   if (state!=='play') return;
   // now and then a laden bough lets go somewhere ahead of you
@@ -2813,7 +2883,6 @@ const CHAL_POOL=[
   {id:'flip3',kind:'flip',txt:'Land 3 flips',goal:3,coin:1200,get:()=>RUN.flips},
   {id:'spin3',kind:'spin',txt:'Land 3 spins',goal:3,coin:900,get:()=>RUN.spins},
   {id:'spin720',kind:'spin',txt:'Land a 720 spin',goal:1,coin:1100,get:()=>RUN.spin720},
-  {id:'hands',kind:'hands',txt:'Land a no-hands jump',goal:1,coin:500,get:()=>RUN.hands},
   {id:'bigair',kind:'air',txt:'Get 2 big airs',goal:2,coin:800,get:()=>RUN.bigAir},
   {id:'combo5',kind:'combo',txt:'Build a ×5 combo',goal:5,coin:1500,get:()=>RUN.comboMax||0},
   {id:'near3',kind:'near',txt:'3 close calls',goal:3,coin:800,get:()=>nearMiss},
@@ -2821,8 +2890,8 @@ const CHAL_POOL=[
   {id:'ft3k',kind:'dist',txt:'Ride 3,000 ft',goal:3000,coin:800,get:()=>Math.round((pz-startZ)*3.281)},
   {id:'ft6k',kind:'dist',txt:'Ride 6,000 ft',goal:6000,coin:1800,get:()=>Math.round((pz-startZ)*3.281)},
   {id:'lake',kind:'zone',txt:'Reach the Frozen River',goal:1,coin:900,get:()=>RUN.zones.has('lake')?1:0},
-  {id:'village',kind:'zone',txt:'Reach the Village',goal:1,coin:1400,get:()=>RUN.zones.has('village')?1:0},
-  {id:'finish',kind:'zone',txt:'Cross the finish line',goal:1,coin:2500,get:()=>FINISHES.filter(f=>f.done).length},
+  {id:'village',kind:'zone',get txt(){ return themeNow==='christmas'?"Reach Santa's Village":'Reach the Village'; },goal:1,coin:1800,get:()=>RUN.zones.has('village')?1:0},
+  {id:'zones4',kind:'zone',txt:'Ride through 4 zones',goal:4,coin:2000,get:()=>RUN.zoneN||1},
   {id:'clean',kind:'clean',txt:'Reach the Alpine Bowl with no crashes',goal:1,coin:1100,get:()=>RUN.zones.has('alpine')&&RUN.clean?1:0},
   {id:'powder',kind:'powder',txt:'Carve 1,500 ft of fresh powder',goal:1500,coin:900,get:()=>Math.round(RUN.powderFt*3.281),when:()=>surfNow==='powder'},
   {id:'gifts',kind:'gifts',txt:'Grab 2 presents',goal:2,coin:900,get:()=>RUN.gifts,when:()=>themeNow==='christmas'},
@@ -2845,7 +2914,7 @@ function updateChals(dt){ if (state!=='play'||!CHALS.length) return; chalT-=dt; 
     for (const q of done){ const li=el.children[CHALS.indexOf(q)]; if (!li) continue; li.classList.add('flash'); const pl=document.createElement('b'); pl.className='plus'; pl.textContent='+'+fmt(q.coin); li.appendChild(pl); setTimeout(()=>pl.remove(),1900); chime(); } } }
 let chalLitT=0;
 function chime(){ if (!AC||muted) return; const t=AC.currentTime; tone(master,'sine',1568,t,0.5,0.035,0.004); tone(master,'sine',2093,t+0.07,0.6,0.03,0.004); }   // a soft two-note chime, no fanfare
-function runCoins(ft){ const laps=FINISHES.filter(f=>f.done).length, fromScore=Math.round(Math.sqrt(Math.max(0,score))*25), fromDist=Math.round(ft*0.4), fromFin=laps*1500, fromChal=CHALS.filter(q=>q.done).reduce((a,q)=>a+q.coin,0);
+function runCoins(ft){ const laps=Math.max(0,(RUN.zoneN||1)-1), fromScore=Math.round(Math.sqrt(Math.max(0,score))*25), fromDist=Math.round(ft*0.4), fromFin=laps*400, fromChal=CHALS.filter(q=>q.done).reduce((a,q)=>a+q.coin,0);
   return {fromScore,fromDist,fromFin,fromChal,total:fromScore+fromDist+fromFin+fromChal}; }
 let lastPay=null;
 function recordRun(){ // bank the run's distance and score into best records and unlocks
@@ -2873,13 +2942,13 @@ function gameOver(){
   const {ft,isBest,bestS}=recordRun(); state='over'; clearHazards();
   const ou=$('overUnlock'), nextUp=cheapestUpgrade(); ou.hidden=false;
   const L=lastPay||{fromScore:0,fromDist:0,fromFin:0,fromChal:0};
-  ou.innerHTML='<b>+'+fmt(lastEarned)+' coins</b> · score '+fmt(L.fromScore)+' · distance '+fmt(L.fromDist)+(L.fromFin?' · finish '+fmt(L.fromFin):'')+(L.fromChal?' · challenges '+fmt(L.fromChal):'')+'<br>Wallet: '+fmt(prog.bank)+' coins'+(nextUp&&prog.bank>=nextUp.cost?' · You can afford an upgrade in the Garage':'');
+  ou.innerHTML='<b>+'+fmt(lastEarned)+' coins</b> · score '+fmt(L.fromScore)+' · distance '+fmt(L.fromDist)+(L.fromFin?' · new zones '+fmt(L.fromFin):'')+(L.fromChal?' · challenges '+fmt(L.fromChal):'')+'<br>Wallet: '+fmt(prog.bank)+' coins'+(nextUp&&prog.bank>=nextUp.cost?' · You can afford an upgrade in the Garage':'');
   $('overChal').innerHTML=CHALS.map(q=>'<li class="'+(q.done?'done':'')+'"><i></i><span>'+q.c.txt+'</span><em>'+(q.done?'+'+fmt(q.coin):'—')+'</em></li>').join('');
   $('sScore').textContent=fmt(score); renderPickers();
-  const cr=crashReason, laps=FINISHES.filter(f=>f.done).length;
+  const cr=crashReason, laps=0;
   $('overWord').textContent=/yeti/.test(cr)?'Yeti snack':/avalanche/.test(cr)?'Buried':/through the/.test(cr)?'Polar plunge':/creek/.test(cr)?'Soaked':/moose/.test(cr)?'Moose 1, you 0':/deer/.test(cr)?'Oh, deer':/tree/i.test(cr)?pick(['Tree hugger','Timber!']):/cabin|shanty|lamp|sign|fence|post|rock/.test(cr)?pick(['Yard sale','Wrong line']):/Land|rotated|hard/.test(cr)?pick(['Rough landing','Yard sale','That\'ll leave a mark']):pick(['Wiped out','Yard sale']);
   $('overEyebrow').textContent='Run over · '+crashReason;
-  $('overText').textContent=(laps?'You crossed the finish line'+(laps>1?' '+laps+' times':'')+'. ':'')+(ft<800?'The hill won this one. Shake the snow out of your collar and go again.': ft<3000?'A solid run. You were just starting to find the lines.': ft<8000?'Serious distance. Your legs are going to feel the hike back up.':'A legendary run. Nobody has seen this far down the valley.');
+  $('overText').textContent=(ft<800?'The hill won this one. Shake the snow out of your collar and go again.': ft<3000?'A solid run. You were just starting to find the lines.': ft<8000?'Serious distance. Your legs are going to feel the hike back up.':'A legendary run. Nobody has seen this far down the valley.');
   $('sDist').textContent=fmt(ft); $('sTop').textContent=Math.round(topSpeed*2.237); $('sAir').textContent=airTotal.toFixed(1); $('sNear').textContent=nearMiss;
   const ob=$('overBest'); ob.className=(isBest||bestS)?'hint newbest':'hint';
   ob.textContent=(isBest&&bestS)?'New longest run and new high score':isBest?'New longest run · High score '+fmt(prog.bestScore):bestS?'New high score · Longest run '+fmt(best)+' ft':'Longest run: '+fmt(best)+' ft · High score: '+fmt(prog.bestScore);
@@ -3199,11 +3268,12 @@ function renderPickers(){
   $('sledInfo').textContent=SLED.blurb;
   $('sledStats').innerHTML=statBars(SLED);
   const mk=(el,opts,cur,fn)=>{ el.innerHTML=''; for (const [id,name] of opts){ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=name; b.setAttribute('aria-pressed',String(cur===id)); b.addEventListener('click',()=>fn(id)); el.appendChild(b); } };
+  mk($('diffPick'),Object.entries(DIFFS).map(([k,v])=>[k,v.name]),prog.diff||'medium',id=>{ setDifficulty(id); renderPickers(); }); $('diffInfo').textContent=DIFF_BLURB[prog.diff||'medium'];
   mk($('condPick'),[['random','Random'],...Object.entries(CONDS).map(([k,v])=>[k,v.name])],prog.cond,id=>{ prog.cond=id; saveProg(); if (CONDS[id]) applyConditions(id); renderPickers(); });
   mk($('snowPick'),[['random','Random'],...Object.entries(SNOWFALL).map(([k,v])=>[k,v.name+(v.mult>1?' ×'+v.mult:'')])],prog.snow,id=>{ prog.snow=id; saveProg(); if (SNOWFALL[id]) applySnowfall(id); renderPickers(); });
   mk($('themePick'),[['classic','Classic'],['christmas','🎄 Christmas']],prog.theme==='christmas'?'christmas':'classic',id=>{ prog.theme=id; saveProg(); applyTheme(id); if (state==='title') rebuildChunks(); renderPickers(); });
   mk($('surfPick'),[['random','Random'],...Object.entries(SURFS).map(([k,v])=>[k,v.name])],prog.surf,id=>{ prog.surf=id; saveProg(); const wasP=surfNow==='powder'; if (SURFS[id]) applySurface(id); if (wasP!==(surfNow==='powder')) rebuildChunks(); renderPickers(); });
-  const bt=$('bestTitle'); bt.hidden=false; bt.textContent='Wallet: '+fmt(prog.bank||0)+' coins'+(best>0||prog.bestScore>0?' · Longest run: '+fmt(best)+' ft · High score: '+fmt(prog.bestScore||0):'')+(prog.finished?' · Finish lines: '+prog.finished:''); }
+  const bt=$('bestTitle'); bt.hidden=false; bt.textContent='Wallet: '+fmt(prog.bank||0)+' coins'+(best>0||prog.bestScore>0?' · Longest run: '+fmt(best)+' ft · High score: '+fmt(prog.bestScore||0):'')+''; }
 function qualityLabels(){ const n=QUALITY[qi].name; $('qualBtn').textContent=n; $('qualBtn2').textContent='Graphics: '+n; }
 function applyQuality(rebuild){
   const q=QUALITY[qi];
@@ -3224,6 +3294,7 @@ $('muteBtn').addEventListener('click',e=>{ initAudio(); setMute(!muted); e.curre
 $('musicBtn').addEventListener('click',e=>{ initAudio(); setMusic(!musicOn); e.currentTarget.blur(); });
 $('gogBtn').addEventListener('click',e=>{ setGoggles(!SETTINGS.goggles); e.currentTarget.blur(); });
 $('menuBtn').addEventListener('click',()=>{ backToTitle(); initAudio(); });
+$('vrBtn').addEventListener('click',enterVR); $('vrBtn2').addEventListener('click',enterVR);
 $('setBtn').addEventListener('click',openSettings); $('setBtn2').addEventListener('click',openSettings); $('setDone').addEventListener('click',closeSettings);
 $('garageBtn').addEventListener('click',openGarage); $('garageBtn2').addEventListener('click',openGarage); $('gDone').addEventListener('click',closeGarage);
 $('pauseMenuBtn').addEventListener('click',()=>{ recordRun(); clearHazards(); loseCombo(); backToTitle(); if (AC) AC.resume(); });
@@ -3246,9 +3317,6 @@ function updateHazardsAndZones(dt){
   updateCritters(dt); updateSanta(dt); updateAval(dt); updateIce(dt);
   if (themeNow==='christmas'){ const tw=Math.sin(time*2.6); XL_A.color.setScalar(xlBright*(0.72+0.28*tw)); XL_B.color.setScalar(xlBright*(0.72-0.28*tw)); }
   for (const m of cracks) if (m.visible){ m.material.opacity-=dt*0.05; if (m.material.opacity<=0.05||Math.abs(m.position.z-pz)>80) m.visible=false; }
-  if (playing) for (const f of FINISHES) if (!f.done && pz>f.z){ f.done=true; lapStart=pz; bankCombo(); score+=Math.round(5000*SNOW.mult); prog.finished=(prog.finished||0)+1; saveProg(); sfx('fanfare');
-    toast('<em>Finish line!</em> +'+fmt(Math.round(5000*SNOW.mult)),true); for (let k=0;k<200;k++){ const a=R()*6.28; emit(px+Math.cos(a)*rr(1,6),py+rr(0.5,5),pz+rr(0,8),Math.cos(a)*rr(1,4)+vx*0.5,rr(1,5),vz*0.6,1,0.5,{size:[0.06,0.2],life:[1,2],g:1.2,drag:1,kind:1}); }
-    const nu=SLEDS.filter(s=>isUnlocked(s)&&!unlockedAtStart.includes(s.id)&&!s.toasted); for (const s of nu){ s.toasted=true; setTimeout(()=>{ if(state==='play') toast('Unlocked: <em>'+s.name+'</em>',true); },1900); } }
   if (playing && comboMult>0){ if (onGround) comboT-=dt; if (comboT<=0) bankCombo(); $('cBar').style.width=clamp(comboT/5,0,1)*100+'%'; }
   const zn=zoneAt(pz), fmT=zn==='alpine'?0.7:zn==='lake'?0.85:zn==='village'?1.1:1; fogMul+=(fmT-fogMul)*Math.min(1,dt*0.5); scene.fog.density=(SETTINGS.goggles?0.74:1)*COND.fogD*fogMul*(1+(COND.pulse||0)*Math.max(-0.6,noise2(time*0.22,7.7)*1.6));
   if (playing && COND.wind>1.2 && R()<dt*(COND.wind>2?0.14:0.06)) faceSnow(COND.wind>2?0.16:0.1);
@@ -3262,8 +3330,9 @@ function updateHazardsAndZones(dt){
   const ch=$('chase'); let name=null, gap=0, max=60;
   if (playing && avNow){ name='Avalanche'; gap=pz-avNow.front; max=65; } else if (playing && yeti.active && yeti.mode==='chase'){ name='Yeti'; gap=pz-yeti.z; max=95; }
   if (name){ ch.hidden=false; $('chaseName').textContent=name; $('chaseDist').textContent=Math.max(0,Math.round(gap))+' m'; $('chaseFill').style.width=clamp(1-gap/max,0,1)*100+'%'; } else if (!ch.hidden) ch.hidden=true;
-  if (zn!==zoneShown && (playing||state==='title')){ zoneShown=zn; $('zoneName').textContent=ZNAME[zn]; if (playing && pz-startZ>30 && zn!=='finish'){ const tip={forest:'',alpine:' · big air ahead',lake:' · ice boosts your speed, jump the cracks',village:' · watch the fences'}[zn]||''; setTimeout(()=>{ if(state==='play') toast('<em>'+ZNAME[zn]+'</em>'+tip); },250); }
-    const zi=['forest','alpine','lake','village','finish'].indexOf(zn); [...document.querySelectorAll('.zbar i')].forEach((el,i)=>el.classList.toggle('on',i<zi)); }
+  if (zn!==zoneShown && (playing||state==='title')){ const first=!zoneShown; zoneShown=zn; $('zoneName').textContent=ZNAME[zn]; if (playing && !first){ RUN.zoneN=(RUN.zoneN||1)+1; const zb=Math.round(1000*SNOW.mult); score+=zb; setTimeout(()=>{ if(state==='play') toast('New zone +'+fmt(zb)); },1600); }
+    if (playing && pz-startZ>30){ const tip={forest:'',alpine:' · big air ahead',lake:' · ice boosts your speed, jump the cracks',village:themeNow==='christmas'?' · mind the elves':' · watch the fences'}[zn]||''; setTimeout(()=>{ if(state==='play') toast('<em>'+ZNAME[zn]+'</em>'+tip); },250); }
+  }
 }
 function update(dt){
   time+=dt;
@@ -3293,13 +3362,13 @@ function update(dt){
     wasGround=onGround;
   } else if (state==='crash'){
     crashT+=dt; tumble+=dt; vx*=Math.exp(-3*dt); vz*=Math.exp(-3*dt); px+=vx*dt; pz+=vz*dt; py=height(px,pz);
-    if (crashT>2){ if (crashes>=3) gameOver(); else { state='play'; respawn(); toast('Back on'); } }
+    if (crashT>2){ if (crashes>=DIFF.lives) gameOver(); else { state='play'; respawn(); toast('Back on'); } }
   }
   sp=speedNow(); if (state==='play') topSpeed=Math.max(topSpeed,sp);
   if (state==='play'){
     if (onGround && sp<0.8) stuckT+=dt; else stuckT=0;
     if (stuckT>1.2 && time-stuckHintAt>4){ stuckHintAt=time; toast('Stuck? Tap <em>↓</em> to push off'); }
-    if (!yeti.active && pz>yeti.next && pz-startZ>300) spawnYeti();
+    if (DIFF.yeti>0 && !yeti.active && pz>yeti.next && pz-startZ>300) spawnYeti();
     for (const m of MEGAS) if (!m.warned && m.z>pz && m.z-pz<130){ m.warned=true; toast('<em>Huge drop</em> ahead',true); }
     { const uu=Math.abs(px-cx(pz)); depAcc+=onGround?dt*((uu>9&&sp>4)?sp*0.55:(sp>6?0.7:0))+carve*sp*0.04*dt:0; while (depAcc>=1){ depAcc-=1; sledDeposit(1,'front'); } }
   }
@@ -3308,7 +3377,7 @@ function update(dt){
     if (show){ const L=pred||predictLanding(), tl=SLED.tol, dp=sPitch+wrapA(flipOff)-L.gp, dr=sRoll-L.gr, se=Math.abs(wrapA(spinOff)), bad=Math.abs(dp)>0.95*tl||Math.abs(dr)>0.8*tl||se>1.0*tl, warn=Math.abs(dp)>0.5*tl||Math.abs(dr)>0.44*tl||se>0.5*tl||handsUp>0.5;
       g.hidden=false; g.className=bad?'bad':warn?'warn':'';
       $('gP').setAttribute('transform','rotate('+(-dp*57.3).toFixed(1)+')'); $('gR').setAttribute('transform','rotate('+(-dr*57.3).toFixed(1)+')');
-      $('gHint').textContent=handsUp>0.5?'Hands back on (G)':se>0.45?'Finish the spin':Math.abs(dp)>0.32?(Math.abs(flipTot)>2?'Finish the flip':dp>0?'↑ Nose down':'↓ Nose up'):Math.abs(dr)>0.28?'← → Level out':'Looking good'; }
+      $('gHint').textContent=se>0.45?'Finish the spin':Math.abs(dp)>0.32?(Math.abs(flipTot)>2?'Finish the flip':'Let go of Shift to level out'):Math.abs(dr)>0.28?'← → Level out':'Looking good'; }
     else if (!g.hidden) g.hidden=true;
   }
   updateYeti(dt); updateHazardsAndZones(dt); updateCrumbs(dt); sprayMat.uniforms.uTime.value=time;
@@ -3358,7 +3427,7 @@ function update(dt){
     $('dist').innerHTML=fmt(Math.max(0,(pz-startZ)*3.281))+'<small>ft</small>'; $('speed').innerHTML=mph+'<small>mph</small>'; $('meter').style.width=Math.min(100,mph/75*100)+'%'; $('tuckTag').classList.toggle('on',tucking); $('iceTag').classList.toggle('on',onIceNow&&onGround&&state==='play');
     $('score').textContent=fmt(score);
     { const ftNow=(pz-startZ)*3.281; for (const s of SLEDS){ const r=s.req; if (r && !s.toasted && !unlockedAtStart.includes(s.id) && ((r.k==='ft'&&ftNow>=r.v)||(r.k==='score'&&score>=r.v))){ s.toasted=true; toast('Unlocked: <em>'+s.name+'</em>',true); } } }
-    const nf=FINISHES.find(f=>!f.done&&f.z>lapStart), fz=nf?nf.z:lapStart+2060; $('zoneDot').style.left=clamp((pz-lapStart)/Math.max(1,fz-lapStart),0,1)*100+'%'; }
+    { let zs=ZSEG[0]; for (const q of ZSEG) if (pz>=q.z0) zs=q; const z1=zs.z1||Math.max(zEnd,zs.z0+300); $('zoneDot').style.left=clamp((pz-zs.z0)/Math.max(1,z1-zs.z0),0,1)*100+'%'; } }
   // automatic quality step-down if the first seconds of a run are choppy
   if (state==='play' && !autoTuned){ fpsAcc+=dt; fpsN++; if (fpsAcc>5){ const fps=fpsN/fpsAcc; autoTuned=true; if (fps<34 && qi>0){ qi--; applyQuality(true); toast('Graphics set to <em>'+QUALITY[qi].name+'</em> for smoother play'); } } }
 }
@@ -3372,6 +3441,7 @@ function chaseCam(dt){
   if (dressOn){ dressOn=false; DRESS.g.visible=false; }
   const dress=false;
   const want=dress||(SETTINGS.chase&&(state==='play'||state==='crash'));
+  if (XR.on){ avatar.visible=false; chOn=false; return; }
   if (!want){ if (rig.parent!==camera){ camera.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); } avatar.visible=false; chOn=false; return; }
   fpAnchor.position.copy(camera.position); fpAnchor.quaternion.copy(camera.quaternion); fpAnchor.updateMatrixWorld(true);
   if (rig.parent!==fpAnchor){ fpAnchor.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
@@ -3442,9 +3512,67 @@ function updateCamera(dt){
 }
 const _sv2=new T.Vector2();
 let last=performance.now();
+/* ---------------- VR (Meta Quest and other WebXR headsets) ----------------
+   You sit on the sled: your head looks around freely while the sled carries you. The world stays level (only your
+   heading turns), spins and flips don't swing your view, and a soft dark edge closes in at speed, all to keep it comfortable.
+   Steer with either thumbstick · right trigger tuck · left trigger brake · A hop · hold a grip + stick for spins and flips
+   · X goggles · Y pause. */
+const XR={on:false,session:null,dolly:new T.Group(),hud:null,hudC:null,hudT:0,msg:'',msgT:0,prevQi:2,btnWas:{},E:new T.Vector3(),Q:new T.Quaternion(),vig:null};
+scene.add(XR.dolly); renderer.xr.enabled=true; renderer.xr.setReferenceSpaceType('local');
+(function buildXRBits(){
+  const c=canvas(512,256); XR.hudC=c; const t=tex(c,true,false); t.minFilter=T.LinearFilter;
+  XR.hud=new T.Mesh(new T.PlaneGeometry(0.44,0.22),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false})); XR.hud.renderOrder=999; XR.hud.visible=false;
+  const vc=canvas(256,256), g=vc.getContext('2d'), gr=g.createRadialGradient(128,128,40,128,128,128); gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(0.55,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,1)'); g.fillStyle=gr; g.fillRect(0,0,256,256);
+  XR.vig=new T.Mesh(new T.PlaneGeometry(0.5,0.5),new T.MeshBasicMaterial({map:tex(vc,false,false),transparent:true,opacity:0,depthTest:false,depthWrite:false})); XR.vig.position.z=-0.12; XR.vig.renderOrder=1000; XR.vig.visible=false; camera.add(XR.vig);
+})();
+function xrMsg(html){ XR.msg=String(html).replace(/<[^>]+>/g,''); XR.msgT=2.2; }
+function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512,256);
+  const panel=(y,h)=>{ g.fillStyle='rgba(13,20,28,0.62)'; g.beginPath(); g.roundRect?g.roundRect(8,y,496,h,22):g.rect(8,y,496,h); g.fill(); };
+  g.textBaseline='middle'; g.fillStyle='#f4f7fa';
+  if (state==='over'||state==='pause'){ panel(8,240); g.textAlign='center';
+    g.font='800 44px "Barlow Condensed", Arial, sans-serif'; g.fillText(state==='over'?'RUN OVER':'PAUSED',256,46);
+    g.font='600 26px Arial, sans-serif'; g.fillText(state==='over'?(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft · score '+fmt(score)+(lastEarned?' · +'+fmt(lastEarned)+' coins':'')):'',256,96);
+    g.fillStyle='#ffc35a'; g.font='700 26px Arial, sans-serif'; g.fillText(state==='over'?'A: ride again':'Y: keep riding',256,150); g.fillStyle='#f4f7fa'; g.fillText('B: leave VR',256,196);
+  } else { panel(132,116); g.textAlign='left';
+    g.font='800 64px "Barlow Condensed", Arial, sans-serif'; g.fillText(Math.round(speedNow()*2.237)+'',30,192); g.font='600 22px Arial, sans-serif'; g.fillText('mph',30+g.measureText('000').width*1.9,204);
+    g.textAlign='right'; g.font='700 30px Arial, sans-serif'; g.fillText(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft',486,166); g.font='600 22px Arial, sans-serif'; g.fillStyle='#c9d3dc';
+    g.fillText('score '+fmt(score)+' · '+'●'.repeat(Math.max(0,DIFF.lives-crashes))+'○'.repeat(Math.min(DIFF.lives,crashes)),486,206); g.fillText(ZNAME[zoneAt(pz)]+(SETTINGS.goggles?' · goggles':''),486,234);
+    if (XR.msgT>0){ panel(18,92); g.textAlign='center'; g.fillStyle='#f4f7fa'; g.font='700 30px Arial, sans-serif'; g.fillText(XR.msg.slice(0,34),256,64); } }
+  XR.hud.material.map.needsUpdate=true; }
+function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)=>{ const was=XR.btnWas[id]; XR.btnWas[id]=on; return on&&!was; };
+  for (const src of ses.inputSources){ const gp=src.gamepad; if (!gp) continue; const L=src.handedness==='left', ax=gp.axes[2]||0, ay=gp.axes[3]||0, b=i=>!!gp.buttons[i]?.pressed;
+    if (Math.abs(ax)>0.18) padSteer=ax; if (Math.abs(ay)>0.25) padPitch=ay;
+    if (b(1)) padTrick=true;
+    if (L){ if (b(0)) padBrake=true; if (pressed('X',b(4))) setGoggles(!SETTINGS.goggles); if (pressed('Y',b(5))) togglePause(); }
+    else { if (b(0)) padTuck=true; const a=pressed('A',b(4)); if (a){ if (state==='play') hopReq=0.15; else if (state==='over') startGame(); } if (pressed('B',b(5)) && (state==='over'||state==='pause')) ses.end(); } } }
+function xrPre(dt){ // the sled carries the dolly; the headset adds your own head movement on top
+  XR.E.copy(camera.position); XR.Q.copy(camera.quaternion);
+  const yawB=camYaw+groundSpin+Math.PI, DO=DECK_OFF[SLED.form], pitchB=camPitch-tuckAmt*0.06+DO[2];
+  XR.dolly.position.copy(XR.E); XR.dolly.rotation.set(0,yawB,0,'YXZ');
+  if (rig.parent!==fpAnchor){ fpAnchor.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
+  fpAnchor.position.copy(XR.E); fpAnchor.rotation.set(pitchB,yawB,state==='play'&&!onGround?0:camRoll*0.4,'YXZ'); rig.visible=state!=='crash';
+  if (XR.hud.parent!==fpAnchor) fpAnchor.add(XR.hud); XR.hud.position.set(0,-0.42,-0.62); XR.hud.rotation.set(-0.55,0,0); XR.hud.visible=true;
+  if (state==='over'||state==='pause'){ XR.hud.position.set(0,0.02,-0.9); XR.hud.rotation.set(0,0,0); XR.hud.scale.setScalar(1.6); } else XR.hud.scale.setScalar(1);
+  XR.msgT-=dt; XR.hudT-=dt; if (XR.hudT<=0){ XR.hudT=0.15; drawXRHud(); }
+  const sp=speedNow(); XR.vig.visible=true; XR.vig.material.opacity=state==='play'?clamp((sp-14)/30,0,0.75)+(onGround?0:0.15):state==='crash'?0.6:0;
+  camera.position.set(0,0,0); camera.quaternion.identity(); camera.updateMatrixWorld(true); }
+function xrPost(){ camera.position.copy(XR.E); camera.quaternion.copy(XR.Q); }
+async function enterVR(){
+  if (!navigator.xr){ toast('VR needs a headset browser, like the Meta Quest Browser'); return; }
+  try {
+    const ses=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']}); XR.session=ses; XR.on=true;
+    XR.prevQi=qi; qi=0; applyQuality(false);   // the headset draws everything twice, so it gets the light graphics
+    XR.dolly.add(camera); await renderer.xr.setSession(ses);
+    ses.addEventListener('end',()=>{ XR.on=false; XR.session=null; scene.add(camera); XR.hud.visible=false; XR.vig.visible=false; if (XR.hud.parent) XR.hud.parent.remove(XR.hud);
+      qi=XR.prevQi; applyQuality(false); if (state==='play'||state==='crash') togglePause(); });
+    initAudio(); if (state==='title'||state==='over') startGame();
+  } catch(e){ XR.on=false; console.error(e); toast("Couldn't start VR here. Open the game's web link in the Meta Quest Browser."); }
+}
 let frameErrs=0;
-function frame(now){ requestAnimationFrame(frame); const dt=Math.min(0.05,(now-last)/1000); last=now;
-  try { pollPad(); update(dt); updateCamera(dt); cullChunks(); renderFrame(); }
+function frame(now){ const dt=Math.min(0.05,(now-last)/1000); last=now;
+  try { pollPad(); if (XR.on) pollXR(); update(dt); updateCamera(dt);
+    if (XR.on){ xrPre(dt); renderer.setRenderTarget(null); renderer.render(scene,camera); xrPost(); }
+    else { cullChunks(); renderFrame(); } }
   catch(e){ if (frameErrs++<5) console.error('Sled of Destiny recovered from an error:',e); }   // one glitch should never freeze the game
 }
 
@@ -3454,7 +3582,8 @@ function boot(){
   state='title'; vx=Math.sin(heading)*10; vz=Math.cos(heading)*10;
   const b=$('startBtn'); b.disabled=false; b.textContent='Push off ▶'; applyOutfit(); setStep(0); $('nextBtn').focus({preventScroll:true});
   renderPickers();
-  requestAnimationFrame(t=>{ last=t; frame(t); });
+  last=performance.now(); renderer.setAnimationLoop(frame);   // the same loop runs in the headset
+  if (navigator.xr&&navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-vr').then(ok=>{ for (const id of ['vrBtn','vrBtn2']){ const b=$(id); if (b) b.hidden=!ok; } }).catch(()=>{});
 }
 setTimeout(boot,30);
 })();

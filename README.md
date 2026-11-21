@@ -4,7 +4,7 @@ A realistic first-person 3D sledding game that runs right in your browser.
 
 **Play it:** https://mediainmotionbuffalo-stack.github.io/sled-of-destiny/
 
-Ride the whole mountain from the Pine Forest through the Alpine Bowl, Frozen River and Village to the finish line. Chain tricks, dodge deer, moose, avalanches and the yeti, earn coins, upgrade your sleds and buy specialty rides like the Rocket Toboggan and Santa's Sleigh.
+Ride an endless mountain that winds at random through pine forest, alpine bowls, frozen rivers and the odd village (Santa's Village in the Christmas theme). Pick a difficulty from Kids to Alpine Pro. Chain tricks, dodge deer, moose, avalanches and the yeti, earn coins, upgrade your sleds and buy specialty rides like the Rocket Toboggan and Santa's Sleigh.
 
 ## Controls
 
@@ -14,12 +14,26 @@ Ride the whole mountain from the Pine Forest through the Alpine Bowl, Frozen Riv
 | ↓ or S | Tuck for speed (tap when stuck to push off) |
 | Space or ↑ | Hop |
 | Shift | Brake. In the air, hold with the arrows for spins and flips |
-| G | No hands |
 | C | Look back |
 | V | Rider view or chase view |
 | O | Goggles on or off (see a little farther in heavy snow) |
 | P or Esc | Pause |
 
 Gamepads work too, and phones and tablets get on-screen touch buttons.
+
+## VR (Meta Quest)
+
+Open the play link in the Meta Quest Browser, set up your rider, and press **🥽 Ride in VR**.
+
+| Control | Action |
+| --- | --- |
+| Either thumbstick | Steer |
+| Right trigger | Tuck |
+| Left trigger | Brake |
+| A | Hop (and ride again after a crash-out) |
+| Grip + thumbstick | Spins and flips |
+| X | Goggles |
+| Y | Pause |
+| B (when paused or after a run) | Leave VR |
 
 Your coins, sleds, upgrades and best-run ghost are saved in your own browser.
