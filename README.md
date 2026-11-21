@@ -21,6 +21,10 @@ Ride an endless mountain that winds at random through pine forest, alpine bowls,
 
 Gamepads work too, and phones and tablets get on-screen touch buttons.
 
+## Challenge a friend
+
+After a run, type your name and press **🏁 Challenge a friend** to copy a link. Your friend gets the exact same hill, conditions and difficulty, races a ghost of your run, and can send a challenge back.
+
 ## VR (Meta Quest)
 
 Open the play link in the Meta Quest Browser, set up your rider, and press **🥽 Ride in VR**.

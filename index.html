@@ -139,6 +139,15 @@ kbd{display:inline-block;min-width:1.5em;padding:1px 6px;margin:0 2px;border-rad
 .chip.sw{flex-direction:row;align-items:center;gap:7px;padding:5px 10px 5px 6px;font-size:.82rem;}
 .chip.sw i{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.25);}
 .row.nav{align-items:center;}
+.racebox{border:1px solid var(--orange);background:rgba(239,106,46,.14);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
+.racebox b{font:800 1.15rem var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--snow);}
+.racebox p{margin:0;font:500 .9rem var(--body);color:var(--snow);}
+.raceres{margin:0;font:700 1rem var(--body);color:#ffc35a;}
+.raceshare{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.raceshare label{font:700 .72rem var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+.raceshare input{font:500 .9rem var(--body);padding:7px 10px;border-radius:8px;border:1px solid var(--glass-line);background:rgba(13,20,28,.5);color:var(--snow);min-width:0;}
+#raceName{width:9em;} #raceLinkOut{flex:1 1 100%;}
+#raceShareMsg{font:600 .85rem var(--body);color:#9fe0b0;}
 .screen.center .card{background:var(--glass);border:1px solid var(--glass-line);border-radius:14px;padding:26px 28px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);width:min(460px,100%);}
 .eyebrow{font-family:var(--body);font-weight:600;font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;color:var(--orange);margin:0;}
 h1,h2{font-family:var(--display);font-weight:800;font-style:italic;text-transform:uppercase;margin:0;line-height:.88;letter-spacing:.01em;text-wrap:balance;}
@@ -270,6 +279,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
       <p class="eyebrow">An endless mountain · how far can you go?</p>
       <h1>Sled of Destiny</h1>
       <p class="lede">Ride an endless mountain through pine forest, alpine bowls, frozen rivers and the odd village. Chain tricks for points, outrun avalanches and the yeti, and unlock faster, wilder sleds.</p>
+      <div class="racebox" id="raceBox" hidden><b id="raceTitle"></b><p id="raceInfo"></p><div class="row"><button class="btn" id="raceGo">Race now ▶</button><button class="btn ghost small" id="raceLeave">Not now</button></div></div>
       <ol class="steps" id="steps" aria-label="Setup steps"><li data-s="0"><b>1</b>Rider</li><li data-s="1"><b>2</b>Conditions</li><li data-s="2"><b>3</b>Sled</li></ol>
       <div class="step" id="step0">
         <div class="pickrow inline"><span class="label">Rider</span><div class="pick" id="genderPick" role="group" aria-label="Boy or girl"></div></div>
@@ -358,7 +368,9 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
         <div><b id="sNear">0</b><span>Close calls</span></div>
       </div>
       <p class="hint" id="overBest"></p>
+      <p class="raceres" id="raceResult" hidden></p>
       <p class="hint unlock" id="overUnlock" hidden></p>
+      <div class="raceshare"><label for="raceName">Your name</label><input id="raceName" maxlength="18" placeholder="Your name" autocomplete="nickname"><button class="btn ghost small" id="raceShareBtn">🏁 Challenge a friend</button><span id="raceShareMsg"></span><input id="raceLinkOut" readonly hidden aria-label="Challenge link"></div>
       <ul id="overChal" aria-label="Challenges"></ul>
       <div class="row"><button class="btn ghost" id="vrBtn2" hidden>🥽 Ride in VR</button><button class="btn" id="againBtn">Hike back up</button><button class="btn ghost small" id="menuBtn">Sled &amp; conditions</button><button class="btn ghost small" id="garageBtn2">🔧 Garage</button><p class="hint">or press <kbd>Enter</kbd></p></div>
     </div>
@@ -374,7 +386,7 @@ const $ = id => document.getElementById(id);
 if (!T) { $('startBtn').textContent = 'Could not load 3D engine'; return; }
 
 /* ---------------- utilities ---------------- */
-const R=Math.random, rr=(a,b)=>a+R()*(b-a), pick=a=>a[(R()*a.length)|0];
+let RNG=Math.random; const R=()=>RNG(), rr=(a,b)=>a+R()*(b-a), pick=a=>a[(R()*a.length)|0];   // the course swaps in its own seeded RNG while it's being laid out
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, smooth=t=>{ t=clamp(t,0,1); return t*t*(3-2*t); };
 const lerp=(a,b,t)=>a+(b-a)*t;
 function mulberry(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
@@ -401,8 +413,10 @@ const QUALITY=[
   {name:'Low',    pr:0.85, shadow:0,    post:false, mblur:false, far:0.45, flakes:350,  lodDist:70},
   {name:'Medium', pr:1.0,  shadow:1024, post:true,  mblur:false, far:0.75, flakes:600, lodDist:95},
   {name:'High',   pr:1.5,  shadow:2048, post:true,  mblur:true,  far:1.0,  flakes:900, lodDist:125},
+  {name:'VR',     pr:1.0,  shadow:0,    post:false, mblur:false, far:0.12, flakes:150,  lodDist:0, vr:true},   // headset only, never picked from the menu
 ];
-let qi=2; try { const s=localStorage.getItem('sledQuality'); if (s!==null) qi=clamp(+s,0,2); } catch(e){}
+const IS_HEADSET=/OculusBrowser|Quest|Pico|Wolvic/i.test(navigator.userAgent);   // standalone headsets: start on light graphics even in the flat view
+let qi=IS_HEADSET?0:2; try { const s=localStorage.getItem('sledQuality'); if (s!==null) qi=clamp(+s,0,2); } catch(e){}
 
 /* ---------------- sleds, conditions, progress ---------------- */
 // mu: friction on snow · iceMu: on ice · deepMu: extra drag off the packed trail · turn/grip/align: steering · hop: jump strength
@@ -615,7 +629,8 @@ function nextSection(){
       else if (t==='rock') addObs({type:'rock',path:true,x,z,s:rr(0.5,1.1),ry:rr(0,6.28)});
       else if (curZone!=='alpine') addObs({type:t,path:true,x,z,s:rr(0.75,1.05),ry:rr(0,6.28)}); void extraObs; } }
 }
-function extendCourse(z){ while(genZ<z) nextSection(); }
+let RUN_SEED=1, COURSE_RNG=null;
+function extendCourse(z){ if (genZ>=z) return; if (!COURSE_RNG) COURSE_RNG=mulberry(RUN_SEED); const prev=RNG; RNG=COURSE_RNG; try { while(genZ<z) nextSection(); } finally { RNG=prev; } }   // the same seed always lays out the same hill
 function drop(z){ if(z<=0) return z*0.21; const i=Math.floor(z); if(i+1>=D.length) extendCourse(i+300); return D[i]+(D[i+1]-D[i])*(z-i); }
 function height(x,z){
   const u=x-cx(z), au=Math.abs(u);
@@ -1267,9 +1282,9 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   yield;
   if (themeNow==='christmas' && L.pineN.length){ const dr=mulberry(k*977+5), dec=L.pineN.filter(o=>{ const au=Math.abs(o.x-cx(o.z)); return au<24 && dr()<(zoneAt(o.z)==='village'?0.7:au<14?0.22:0.12); });
     if (!dec.length){ const near=L.pineN.filter(o=>Math.abs(o.x-cx(o.z))<30); if (near.length) dec.push(near[(dr()*near.length)|0]); } decorateTrees(dec,group,dr); }
-  inst(L.pineN,PINE.core,CORE_MAT,sh,null,det,treeP); inst(L.pineN,PINE_L.core,CORE_MAT,sh,null,lite,treeP); inst(L.pineF,PINE_L.core,CORE_MAT,false,null,qi>0?lite:null,treeP);
-  if (qi>0){ inst(L.pineF,PINE.wood,OBJ_MAT,false,null,det,treeP); inst(L.pineF,PINE.needles,NEEDLE_MAT,false,null,det,treeP); inst(L.pineF,PINE.snow,BSNOW_MAT,false,null,det,treeP); inst(L.pineF,PINE.core,CORE_MAT,false,null,det,treeP); }   // full-detail pines off to the sides too (Low graphics and VR keep the light ones)
-  const fL=qi>0?lite:null; inst(L.pineF,PINE_L.wood,OBJ_MAT,false,null,fL,treeP); inst(L.pineF,PINE_L.needles,NEEDLE_MAT_L,false,null,fL,treeP); inst(L.pineF,PINE_L.snow,BSNOW_MAT_L,false,null,fL,treeP);
+  inst(L.pineN,PINE.core,CORE_MAT,sh,null,det,treeP); inst(L.pineN,PINE_L.core,CORE_MAT,sh,null,lite,treeP); inst(L.pineF,PINE_L.core,CORE_MAT,false,null,(qi===1||qi===2)?lite:null,treeP);
+  if (qi===1||qi===2){ inst(L.pineF,PINE.wood,OBJ_MAT,false,null,det,treeP); inst(L.pineF,PINE.needles,NEEDLE_MAT,false,null,det,treeP); inst(L.pineF,PINE.snow,BSNOW_MAT,false,null,det,treeP); inst(L.pineF,PINE.core,CORE_MAT,false,null,det,treeP); }   // full-detail pines off to the sides too (Low graphics and VR keep the light ones)
+  const fL=(qi===1||qi===2)?lite:null; inst(L.pineF,PINE_L.wood,OBJ_MAT,false,null,fL,treeP); inst(L.pineF,PINE_L.needles,NEEDLE_MAT_L,false,null,fL,treeP); inst(L.pineF,PINE_L.snow,BSNOW_MAT_L,false,null,fL,treeP);
   yield;
   inst(L.bareN,GEO.bare,OBJ_MAT,sh,null,null,treeP); inst(L.bareF,GEO.bare,OBJ_MAT,false,null,null,treeP);
   inst(L.birchN,GEO.birch,OBJ_MAT,sh,null,null,treeP); inst(L.birchF,GEO.birch,OBJ_MAT,false,null,null,treeP);
@@ -1311,15 +1326,15 @@ function disposeChunk(k,keepPath){ const g=chunks.get(k); if(!g) return; scene.r
   for (let b=Math.floor(k*CH/10); b<Math.floor((k+1)*CH/10); b++){ if(!keepPath) OB.delete(b); else if(OB.has(b)) OB.set(b,OB.get(b).filter(o=>o.path)); } }
 function updateChunks(all){
   const kc=Math.floor(pz/CH);
-  for (let k=Math.max(0,kc-1);k<=kc+8;k++) if(!chunks.has(k) && !buildQueue.includes(k) && !(building&&building.k===k)) buildQueue.push(k);
+  const ahead=XR.on?5:8; for (let k=Math.max(0,kc-1);k<=kc+ahead;k++) if(!chunks.has(k) && !buildQueue.includes(k) && !(building&&building.k===k)) buildQueue.push(k);
   buildQueue.sort((a,b)=>a-b);
   if (all){ if (building){ while(!building.g.next().done); building=null; } while (buildQueue.length){ const k=buildQueue.shift(); if(!chunks.has(k)) buildChunk(k); } }
   else { const t0=performance.now();   // spend a few milliseconds per frame on the next chunk; finish at once if the rider is about to reach it
-    while (performance.now()-t0<4){ if (!building){ while (buildQueue.length && chunks.has(buildQueue[0])) buildQueue.shift(); if (!buildQueue.length) break; const k=buildQueue.shift(); building={k,g:buildChunkGen(k)}; }
+    const budget=XR.on?1.5:4; while (performance.now()-t0<budget){ if (!building){ while (buildQueue.length && chunks.has(buildQueue[0])) buildQueue.shift(); if (!buildQueue.length) break; const k=buildQueue.shift(); building={k,g:buildChunkGen(k)}; }
       const urgent=building.k<=kc+1; if (building.g.next().done || (urgent && (()=>{ while(!building.g.next().done); return true; })())) building=null; } }
   for (const k of [...chunks.keys()]) if (k<kc-2||k>kc+10) disposeChunk(k,false);
 }
-function newCourse(){ building=null; for (const k of [...chunks.keys()]) disposeChunk(k,false); buildQueue.length=0; D.length=1; D[0]=0; genZ=0; curSl=0.2; lastSec=''; lastMega=-1e9;
+function newCourse(seed){ RUN_SEED=seed!==undefined?seed:(Math.random()*2147483647)|0; COURSE_RNG=mulberry(RUN_SEED); building=null; for (const k of [...chunks.keys()]) disposeChunk(k,false); buildQueue.length=0; D.length=1; D[0]=0; genZ=0; curSl=0.2; lastSec=''; lastMega=-1e9;
   FB.clear(); FRESH_C.clear(); if (typeof clearTracks==='function') clearTracks(); OB.clear(); ICE.length=0; STREAMS.length=0; MEGAS.length=0; AVAL.length=0; FINISHES.length=0; ROADS.length=0; ZSEG.length=0; SANTAS.length=0; lastSanta=-1e9; zEnd=600; curZone='forest'; extendCourse(1200); }
 function rebuildChunks(){ building=null; for (const k of [...chunks.keys()]) disposeChunk(k,true); buildQueue.length=0; updateChunks(true); }
 const frustum=new T.Frustum(), projM=new T.Matrix4();
@@ -2531,12 +2546,12 @@ function updateSnowfall(dt){
   flakes.material.uniforms.uFar.value=L.box*2.8; gdrift.material.uniforms.uFar.value=18;
 }
 const _fw2=new T.Vector3();
-function groundCount(){ return Math.min(GDRIFT,Math.round((SNOW?SNOW.ground:0)*[0.35,0.65,1][qi])); }
-function flakeCount(){ return Math.min(FLAKES,Math.round((SNOW?SNOW.n:400)*[0.3,0.6,1][qi])); }
+function groundCount(){ return Math.min(GDRIFT,Math.round((SNOW?SNOW.ground:0)*[0.35,0.65,1,0.12][qi])); }
+function flakeCount(){ return Math.min(FLAKES,Math.round((SNOW?SNOW.n:400)*[0.3,0.6,1,0.1][qi])); }
 function applySurface(id){ surfNow=id; SURF=SURFS[id]||SURFS.packed; terrainMat.roughness=SURF.rough; POW_U.value=surfNow==='powder'?1:0; CRUST_U.value=surfNow==='crust'?1:0; RUT_MAT.visible=surfNow!=='powder'; if (surfNow!=='powder'){ sinkNow=0; clearTrail(); } GLINT_U.value=SURF.glint*clamp((SNOW?SNOW.sunK:1)*1.25-0.15,0,1); }
-function resolveConditions(){ let c=prog.cond; if (!CONDS[c]) c=pick(['golden','golden','day','sunset','night']);
-  let w=prog.snow; if (!SNOWFALL[w]) w=pick(['none','flurry','flurry','steady','steady','heavy','blizzard']);
-  let s=prog.surf; if (!SURFS[s]) s=pick(['packed','packed','powder','crust']); SNOW=SNOWFALL[w]; snowNow=w; applyConditions(c); applySurface(s); applyTheme(prog.theme==='christmas'?'christmas':'classic'); }
+function resolveConditions(){ let c=RACE?RACE.c:prog.cond; if (!CONDS[c]) c=pick(['golden','golden','day','sunset','night']);
+  let w=RACE?RACE.w:prog.snow; if (!SNOWFALL[w]) w=pick(['none','flurry','flurry','steady','steady','heavy','blizzard']);
+  let s=RACE?RACE.g:prog.surf; if (!SURFS[s]) s=pick(['packed','packed','powder','crust']); SNOW=SNOWFALL[w]; snowNow=w; applyConditions(c); applySurface(s); applyTheme((RACE?RACE.t:prog.theme)==='christmas'?'christmas':'classic'); }
 
 /* ---------------- player state & physics ---------------- */
 let state='loading', px=0, py=0, vx=0, vz=5, vy=0, heading=0, onGround=true, airStart=0, startZ=6;
@@ -2767,6 +2782,7 @@ const trickIn=()=>!!(keys.ShiftLeft||keys.ShiftRight||padTrick);
 const lookIn=()=>!!(keys.KeyC||padLook);
 function toggleFullscreen(){ try{ if(document.fullscreenElement) document.exitFullscreen(); else $('app').requestFullscreen().catch(()=>{}); }catch(e){} }
 addEventListener('keydown',e=>{
+  if (e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) return;
   if (!$('garage').hidden){ if (e.code==='Escape'||e.code==='KeyG'){ e.preventDefault(); closeGarage(); } return; }
   if (!$('settings').hidden){ if (e.code==='Escape'){ e.preventDefault(); closeSettings(); } return; }
   if (e.code==='KeyV' && !e.repeat){ SETTINGS.chase=!SETTINGS.chase; saveSettings(); if (state==='play') toast(SETTINGS.chase?'Chase view':'Rider view'); }
@@ -2871,16 +2887,46 @@ const ghostG=(()=>{ const g=new T.Group(), m=new T.MeshBasicMaterial({color:0x9f
   for (const sx of [-1,1]){ const leg=new T.Mesh(new T.CylinderGeometry(0.07,0.06,0.75,8),m); leg.rotation.x=Math.PI/2-0.15; leg.position.set(sx*0.12,0.2,0.35); g.add(leg); }
   g.visible=false; scene.add(g); return g; })();
 function ghostStart(){ ghRec.t=0; ghRec.acc=0; ghRec.z=[]; ghRec.u=[]; ghostG.visible=false; }
-function ghostAt(t){ const G=GHOST, i=t/GH_DT, a=Math.floor(i); if (!G||a+1>=G.z.length) return null; const f=i-a; return {z:lerp(G.z[a],G.z[a+1],f),u:lerp(G.u[a],G.u[a+1],f),z2:G.z[Math.min(G.z.length-1,a+3)],u2:G.u[Math.min(G.z.length-1,a+3)]}; }
+function ghostAt(t){ const G=RACE&&RACE.active?RACE:GHOST, i=t/GH_DT, a=Math.floor(i); if (!G||a+1>=G.z.length) return null; const f=i-a; return {z:lerp(G.z[a],G.z[a+1],f),u:lerp(G.u[a],G.u[a+1],f),z2:G.z[Math.min(G.z.length-1,a+3)],u2:G.u[Math.min(G.z.length-1,a+3)]}; }
 function updateGhost(dt){
   const live=state==='play'||state==='crash';
   if (live){ ghRec.t+=dt; ghRec.acc+=dt; if (ghRec.acc>=GH_DT){ ghRec.acc-=GH_DT; ghRec.z.push(Math.round((pz-startZ)*10)/10); ghRec.u.push(Math.round((px-cx(pz))*100)/100); } }
-  const g=GHOST&&live&&SETTINGS.ghost?ghostAt(ghRec.t):null, el=$('ghostGap');
+  const racing=RACE&&RACE.active, g=(racing||(GHOST&&SETTINGS.ghost))&&live?ghostAt(ghRec.t):null, el=$('ghostGap');
   if (!g){ ghostG.visible=false; if (el) el.hidden=true; return; }
   const z=startZ+g.z, x=cx(z)+g.u, z2=startZ+g.z2, x2=cx(z2)+g.u2;
   ghostG.position.set(x,gH(x,z)-(surfNow==='powder'?0.15:0),z); ghostG.rotation.set(0,Math.atan2(x2-x,Math.max(0.01,z2-z)),0); ghostG.visible=Math.abs(z-pz)>1.2;
-  const gap=Math.round((z-pz)*3.281); if (el){ el.hidden=false; el.textContent=gap>0?'Best run: '+fmt(gap)+' ft ahead':gap<0?'Beating your best by '+fmt(-gap)+' ft':'Neck and neck with your best'; el.classList.toggle('ahead',gap<0); } }
+  const gap=Math.round((z-pz)*3.281); if (el){ el.hidden=false; const who=racing?RACE.n:'Best run'; el.textContent=racing?(gap>0?who+': '+fmt(gap)+' ft ahead of you':gap<0?'You lead '+who+' by '+fmt(-gap)+' ft':'Neck and neck with '+who):(gap>0?'Best run: '+fmt(gap)+' ft ahead':gap<0?'Beating your best by '+fmt(-gap)+' ft':'Neck and neck with your best'); el.classList.toggle('ahead',gap<0); } }
 function saveGhost(ft){ if (ghRec.z.length<10 || (GHOST&&GHOST.ft>=ft)) return; GHOST={ft:Math.round(ft),z:ghRec.z.slice(),u:ghRec.u.slice()}; try{ localStorage.setItem('sledGhost',JSON.stringify(GHOST)); }catch(e){} }
+
+/* ---------------- challenge a friend ----------------
+   A challenge link carries the hill's seed, the conditions, difficulty and theme, your score and distance, and your
+   run as a compact ghost (where you were every 0.2 s). Your friend gets the exact same hill and races your ghost. */
+let RACE=null, RUN_CFG=null;
+const GAME_URL='https://mediainmotionbuffalo-stack.github.io/sled-of-destiny/';
+const b64u=bytes=>{ let s=''; for (let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); };
+const unb64u=str=>{ const s=atob(str.replace(/-/g,'+').replace(/_/g,'/')); const a=new Uint8Array(s.length); for (let i=0;i<s.length;i++) a[i]=s.charCodeAt(i); return a; };
+function raceLink(){ const C=RUN_CFG; if (!C||ghRec.z.length<5) return null;
+  const n=ghRec.z.length, bytes=new Uint8Array(n*2); let prev=0;
+  for (let i=0;i<n;i++){ const dz=Math.round((ghRec.z[i]-prev)*10); prev+=dz/10; bytes[i*2]=clamp(dz,0,255); bytes[i*2+1]=(clamp(Math.round(ghRec.u[i]*10),-127,127)+256)%256; }
+  const hdr={v:1,s:C.s,d:C.d,c:C.c,w:C.w,g:C.g,t:C.t,n:(prog.name||'A friend').slice(0,18),ft:Math.round(Math.max(0,(pz-startZ)*3.281)),sc:score,sl:SLED.name};
+  const base=/github\.io$/.test(location.hostname)?location.origin+location.pathname:GAME_URL;
+  return base+'#race='+b64u(new TextEncoder().encode(JSON.stringify(hdr)))+'.'+b64u(bytes); }
+function readRaceLink(){ try { const m=location.hash.match(/^#race=([\w-]+)\.([\w-]+)/); if (!m) return null;
+  const hdr=JSON.parse(new TextDecoder().decode(unb64u(m[1]))), by=unb64u(m[2]), z=[], u=[]; let acc=0;
+  for (let i=0;i+1<by.length;i+=2){ acc+=by[i]/10; z.push(acc); u.push((by[i+1]>127?by[i+1]-256:by[i+1])/10); }
+  if (!hdr.s||z.length<5) return null; return Object.assign(hdr,{z,u,active:false}); } catch(e){ return null; } }
+function renderRaceBox(){ const b=$('raceBox'); if (!RACE){ b.hidden=true; return; } b.hidden=false;
+  $('raceTitle').textContent=RACE.n+' challenged you!';
+  $('raceInfo').textContent=fmt(RACE.ft)+' ft · '+fmt(RACE.sc)+' points on '+(DIFFS[RACE.d]||DIFFS.medium).name+' · '+((CONDS[RACE.c]||{}).name||'')+' · '+((SNOWFALL[RACE.w]||{}).name||'')+' · '+((SURFS[RACE.g]||{}).name||'')+(RACE.t==='christmas'?' · Christmas':'')+'. Same hill, race their ghost. You ride your own sled ('+SLED.name+').'; }
+function leaveRace(){ RACE=null; try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} DIFF=DIFFS[prog.diff]||DIFFS.medium; applyTheme(prog.theme==='christmas'?'christmas':'classic'); setSled(SLED.id); renderRaceBox(); renderPickers(); }
+async function shareRace(){ const url=raceLink(), out=$('raceLinkOut'), st=$('raceShareMsg'); if (!url){ st.textContent='Ride a bit farther first'; return; }
+  out.hidden=false; out.value=url; let done=false;
+  try { await navigator.clipboard.writeText(url); done=true; st.textContent='Link copied. Send it to a friend!'; } catch(e){}
+  if (!done){ try { if (navigator.share){ await navigator.share({title:'Sled of Destiny',text:'Beat my run on Sled of Destiny!',url}); done=true; st.textContent='Shared!'; } } catch(e){} }
+  if (!done){ out.focus(); out.select(); st.textContent='Copy this link and send it to a friend'; } }
+function raceResult(ft){ if (!RACE) return ''; const myFt=Math.round(Math.max(0,ft)), d=myFt-RACE.ft, ds=score-RACE.sc;
+  const head=d>0&&ds>0?'You beat '+RACE.n+'!':d<=0&&ds<=0?RACE.n+' wins this one.':'Split decision!';
+  return head+' Distance: you '+fmt(myFt)+' ft vs '+fmt(RACE.ft)+' ft ('+(d>=0?'+':'')+fmt(d)+'). Score: you '+fmt(score)+' vs '+fmt(RACE.sc)+'.'; }
 
 /* ---------------- run stats, challenges and coin payout ---------------- */
 let RUN={flips:0,spins:0,spin720:0,hands:0,bigAir:0,zones:new Set(),powderFt:0,gifts:0,clean:true};
@@ -2930,7 +2976,10 @@ function recordRun(){ // bank the run's distance and score into best records and
   prog.bestFt=Math.max(prog.bestFt||0,ft); prog.bestScore=Math.max(prog.bestScore||0,score); lastPay=runCoins(ft); prog.bank=(prog.bank||0)+lastPay.total; lastEarned=lastPay.total; saveGhost(ft); saveProg(); return {ft,isBest,bestS}; }
 function startGame(){
   if (runLive) recordRun();
-  initAudio(); resolveConditions(); setSled(SLED.id); newCourse(); resetRun(); updateChunks(true); state='play'; fpsAcc=0; fpsN=0;
+  if (RACE) RACE.active=true; DIFF=RACE?(DIFFS[RACE.d]||DIFFS.medium):(DIFFS[prog.diff]||DIFFS.medium);
+  initAudio(); resolveConditions(); setSled(SLED.id); newCourse(RACE?RACE.s:undefined); resetRun(); updateChunks(true); state='play'; fpsAcc=0; fpsN=0;
+  RUN_CFG={s:RUN_SEED,d:RACE?RACE.d:(prog.diff||'medium'),c:condNow,w:snowNow,g:surfNow,t:themeNow}; $('raceLinkOut').hidden=true; $('raceShareMsg').textContent='';
+  if (RACE) setTimeout(()=>{ if (state==='play') toast('Racing <em>'+RACE.n+'</em> on the same hill',true); },900);
   unlockedAtStart=SLEDS.filter(isUnlocked).map(s=>s.id); runLive=true; hintShown=false;
   RUN={flips:0,spins:0,spin720:0,hands:0,bigAir:0,zones:new Set(),powderFt:0,gifts:0,clean:true,comboMax:0}; rollChallenges(); ghostStart();
   $('title').hidden=true; $('over').hidden=true; $('pause').hidden=true; $('hud').hidden=false; renderPips();
@@ -2951,6 +3000,7 @@ function gameOver(){
   ou.innerHTML='<b>+'+fmt(lastEarned)+' coins</b> · score '+fmt(L.fromScore)+' · distance '+fmt(L.fromDist)+(L.fromFin?' · checkpoints '+fmt(L.fromFin):'')+(L.fromChal?' · challenges '+fmt(L.fromChal):'')+'<br>Wallet: '+fmt(prog.bank)+' coins'+(nextUp&&prog.bank>=nextUp.cost?' · You can afford an upgrade in the Garage':'');
   $('overChal').innerHTML=CHALS.map(q=>'<li class="'+(q.done?'done':'')+'"><i></i><span>'+q.c.txt+'</span><em>'+(q.done?'+'+fmt(q.coin):'—')+'</em></li>').join('');
   $('sScore').textContent=fmt(score); renderPickers();
+  { const rr2=$('raceResult'), t=raceResult(ft); rr2.hidden=!t; rr2.textContent=t; $('raceShareBtn').textContent=RACE?'🏁 Send a challenge back':'🏁 Challenge a friend'; $('againBtn').textContent=RACE?'Race '+RACE.n+' again':'Hike back up'; $('raceName').value=prog.name||''; }
   const cr=crashReason, laps=RUN.cps||0;
   $('overWord').textContent=/yeti/.test(cr)?'Yeti snack':/avalanche/.test(cr)?'Buried':/through the/.test(cr)?'Polar plunge':/creek/.test(cr)?'Soaked':/moose/.test(cr)?'Moose 1, you 0':/deer/.test(cr)?'Oh, deer':/tree/i.test(cr)?pick(['Tree hugger','Timber!']):/cabin|shanty|lamp|sign|fence|post|rock/.test(cr)?pick(['Yard sale','Wrong line']):/Land|rotated|hard/.test(cr)?pick(['Rough landing','Yard sale','That\'ll leave a mark']):pick(['Wiped out','Yard sale']);
   $('overEyebrow').textContent='Run over · '+crashReason;
@@ -3011,7 +3061,7 @@ function renderGarage(){
     btn.textContent=own?(s.id===SLED.id?'Riding':'Ride it'):can?'Buy · '+fmt(s.price):'Need '+fmt(s.price-(prog.bank||0))+' more'; btn.disabled=own?s.id===SLED.id:!can;
     btn.addEventListener('click',()=>{ if (own){ pickSled(s.id); renderGarage(); return; } if ((prog.bank||0)<s.price) return; prog.bank-=s.price; prog.owned.push(s.id); saveProg(); initAudio(); sfx('fanfare'); pickSled(s.id); renderGarage(); });
     r.appendChild(btn); sp.appendChild(r); } }
-function backToTitle(){ state='title'; setStep(1); $('over').hidden=true; $('pause').hidden=true; $('hud').hidden=true; $('title').hidden=false; renderPickers(); }
+function backToTitle(){ state='title'; setStep(1); if (RACE){ RACE.active=false; renderRaceBox(); } $('over').hidden=true; $('pause').hidden=true; $('hud').hidden=true; $('title').hidden=false; renderPickers(); }
 /* ---------------- the dressing room: your rider by the outdoor fireplace of a mountain chalet, snow coming down ---------------- */
 const DRESS={ok:false,pos:new T.Vector3(6000,0,-6000)};
 function buildDress(){ if (DRESS.ok||DRESS.failed) return; DRESS.ok=true; try { buildDressInner(); } catch(e){ console.error('dressing room',e); DRESS.failed=true; DRESS.ok=false; if (DRESS.g) DRESS.g.visible=false; } }
@@ -3292,7 +3342,7 @@ function applyQuality(rebuild){
   scene.traverse(o=>{ if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true); } });
   qualityLabels();
 }
-function cycleQuality(){ qi=(qi+1)%QUALITY.length; autoTuned=true; try{ localStorage.setItem('sledQuality',String(qi)); }catch(e){} applyQuality(true); if(state==='play') toast('Graphics: <em>'+QUALITY[qi].name+'</em>'); }
+function cycleQuality(){ if (XR.on) return; qi=(qi+1)%3; autoTuned=true; try{ localStorage.setItem('sledQuality',String(qi)); }catch(e){} applyQuality(true); if(state==='play') toast('Graphics: <em>'+QUALITY[qi].name+'</em>'); }
 $('startBtn').addEventListener('click',startGame); $('againBtn').addEventListener('click',startGame);
 $('pauseBtn').addEventListener('click',e=>{ togglePause(); e.currentTarget.blur(); }); $('resumeBtn').addEventListener('click',togglePause); $('quitBtn').addEventListener('click',startGame);
 $('fsBtn').addEventListener('click',e=>{ toggleFullscreen(); e.currentTarget.blur(); });
@@ -3300,6 +3350,8 @@ $('muteBtn').addEventListener('click',e=>{ initAudio(); setMute(!muted); e.curre
 $('musicBtn').addEventListener('click',e=>{ initAudio(); setMusic(!musicOn); e.currentTarget.blur(); });
 $('gogBtn').addEventListener('click',e=>{ setGoggles(!SETTINGS.goggles); e.currentTarget.blur(); });
 $('menuBtn').addEventListener('click',()=>{ backToTitle(); initAudio(); });
+$('raceGo').addEventListener('click',()=>{ startGame(); }); $('raceLeave').addEventListener('click',leaveRace);
+$('raceShareBtn').addEventListener('click',shareRace); $('raceName').addEventListener('input',e=>{ prog.name=e.target.value.trim(); saveProg(); });
 $('vrBtn').addEventListener('click',enterVR); $('vrBtn2').addEventListener('click',enterVR);
 $('setBtn').addEventListener('click',openSettings); $('setBtn2').addEventListener('click',openSettings); $('setDone').addEventListener('click',closeSettings);
 $('garageBtn').addEventListener('click',openGarage); $('garageBtn2').addEventListener('click',openGarage); $('gDone').addEventListener('click',closeGarage);
@@ -3444,7 +3496,7 @@ function update(dt){
     { const ftNow=(pz-startZ)*3.281; for (const s of SLEDS){ const r=s.req; if (r && !s.toasted && !unlockedAtStart.includes(s.id) && ((r.k==='ft'&&ftNow>=r.v)||(r.k==='score'&&score>=r.v))){ s.toasted=true; toast('Unlocked: <em>'+s.name+'</em>',true); } } }
     { let zs=ZSEG[0]; for (const q of ZSEG) if (pz>=q.z0) zs=q; const z1=zs.z1||Math.max(zEnd,zs.z0+300); $('zoneDot').style.left=clamp((pz-zs.z0)/Math.max(1,z1-zs.z0),0,1)*100+'%'; } }
   // automatic quality step-down if the first seconds of a run are choppy
-  if (state==='play' && !autoTuned){ fpsAcc+=dt; fpsN++; if (fpsAcc>5){ const fps=fpsN/fpsAcc; autoTuned=true; if (fps<34 && qi>0){ qi--; applyQuality(true); toast('Graphics set to <em>'+QUALITY[qi].name+'</em> for smoother play'); } } }
+  if (state==='play' && !autoTuned){ fpsAcc+=dt; fpsN++; if (fpsAcc>5){ const fps=fpsN/fpsAcc; autoTuned=true; if (fps<34 && qi>0 && qi<3){ qi--; applyQuality(true); toast('Graphics set to <em>'+QUALITY[qi].name+'</em> for smoother play'); } } }
 }
 // chase view: the rider stays exactly where the first-person eye was, and the camera pulls back behind and above them
 const fpAnchor=new T.Object3D(); scene.add(fpAnchor); let chYaw=0, chOn=false, chPos=new T.Vector3(), chLook=new T.Vector3();
@@ -3576,17 +3628,21 @@ async function enterVR(){
   if (!navigator.xr){ toast('VR needs a headset browser, like the Meta Quest Browser'); return; }
   try {
     const ses=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']}); XR.session=ses; XR.on=true;
-    XR.prevQi=qi; qi=0; applyQuality(false);   // the headset draws everything twice, so it gets the light graphics
+    XR.prevQi=qi; qi=3; applyQuality(true);   // the headset draws everything twice at high resolution, so it gets its own very light graphics
+    renderer.xr.setFramebufferScaleFactor(0.72);   // render a little below the panel's native resolution; the lenses hide most of the difference
     XR.dolly.add(camera); await renderer.xr.setSession(ses);
+    try { const bl=ses.renderState.baseLayer; if (bl && 'fixedFoveation' in bl) bl.fixedFoveation=1; } catch(e){}   // sharp in the middle, cheaper at the edges
+    if (ses.updateTargetFrameRate && ses.supportedFrameRates && [...ses.supportedFrameRates].includes(72)) ses.updateTargetFrameRate(72).catch(()=>{});
     ses.addEventListener('end',()=>{ XR.on=false; XR.session=null; scene.add(camera); XR.hud.visible=false; XR.vig.visible=false; if (XR.hud.parent) XR.hud.parent.remove(XR.hud);
-      qi=XR.prevQi; applyQuality(false); if (state==='play'||state==='crash') togglePause(); });
+      qi=XR.prevQi; applyQuality(true); if (state==='play'||state==='crash') togglePause(); });
     initAudio(); if (state==='title'||state==='over') startGame();
   } catch(e){ XR.on=false; console.error(e); toast("Couldn't start VR here. Open the game's web link in the Meta Quest Browser."); }
 }
 let frameErrs=0;
 function frame(now){ const dt=Math.min(0.05,(now-last)/1000); last=now;
   try { pollPad(); if (XR.on) pollXR(); update(dt); updateCamera(dt);
-    if (XR.on){ xrPre(dt); renderer.setRenderTarget(null); renderer.render(scene,camera); xrPost(); }
+    if (XR.on){ xrPre(dt); for (const g of chunks.values()){ g.visible=true; for (const m of g.userData.det) m.visible=false; for (const m of g.userData.lite) m.visible=true; }   // all around you (it's 360°), light trees only
+      renderer.setRenderTarget(null); renderer.render(scene,camera); xrPost(); }
     else { cullChunks(); renderFrame(); } }
   catch(e){ if (frameErrs++<5) console.error('Sled of Destiny recovered from an error:',e); }   // one glitch should never freeze the game
 }
@@ -3597,6 +3653,7 @@ function boot(){
   state='title'; vx=Math.sin(heading)*10; vz=Math.cos(heading)*10;
   const b=$('startBtn'); b.disabled=false; b.textContent='Push off ▶'; applyOutfit(); setStep(0); $('nextBtn').focus({preventScroll:true});
   renderPickers();
+  RACE=readRaceLink(); renderRaceBox(); if (RACE) setStep(2);
   last=performance.now(); renderer.setAnimationLoop(frame);   // the same loop runs in the headset
   if (navigator.xr&&navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-vr').then(ok=>{ for (const id of ['vrBtn','vrBtn2']){ const b=$(id); if (b) b.hidden=!ok; } }).catch(()=>{});
 }
