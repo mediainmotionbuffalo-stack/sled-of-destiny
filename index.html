@@ -326,7 +326,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
         <span><kbd>C</kbd></span><span>Look back</span>
         <span><kbd>V</kbd></span><span>Switch between rider view and chase view</span>
         <span><kbd>O</kbd></span><span>Goggles on or off: a little more contrast and a little farther through the snow</span>
-        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Thumbstick steer · right trigger tuck · left trigger brake · A hop · grip + stick for tricks · X goggles · Y pause · VR graphics tune themselves to your headset (click the left stick to pin Fast, Balanced or Detailed)</span>
+        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Thumbstick or lean to steer · right trigger tuck · left trigger brake · A hop · grip + stick for tricks · X goggles · Y pause · VR graphics tune themselves to your headset (click the left stick to pin Fast, Balanced or Detailed)</span>
         <span><kbd>P</kbd> / <kbd>Esc</kbd></span><span>Pause</span>
         <span><kbd>M</kbd> · <kbd>N</kbd> · <kbd>F</kbd> · <kbd>Q</kbd></span><span>Sound · music · fullscreen · graphics</span>
       </div>
@@ -392,8 +392,10 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 function mulberry(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 function hash3(x,y,z){ const s=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453; return s-Math.floor(s); }
 const angDiff=(a,b)=>{ let d=a-b; while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI; return d; };
-const SETTINGS=Object.assign({vol:1,music:0.8,fov:70,shake:true,chase:false,ghost:true,warn:'off',touch:'auto',goggles:false},(()=>{ try{ return JSON.parse(localStorage.getItem('sledSettings')||'{}'); }catch(e){ return {}; } })());
+const SETTINGS=Object.assign({vrCF:1,vrLean:true,vol:1,music:0.8,fov:70,shake:true,chase:false,ghost:true,warn:'off',touch:'auto',goggles:false},(()=>{ try{ return JSON.parse(localStorage.getItem('sledSettings')||'{}'); }catch(e){ return {}; } })());
 if (!SETTINGS.warnV){ SETTINGS.warn='off'; SETTINGS.warnV=1; }
+if (SETTINGS.vrComfort===true){ SETTINGS.vrCF=2; delete SETTINGS.vrComfort; }
+const CF_NAME=['Low','Medium','High'];
 function saveSettings(){ try{ localStorage.setItem('sledSettings',JSON.stringify(SETTINGS)); }catch(e){} }
 const prefersCalm=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let reduceMotion=prefersCalm||!SETTINGS.shake;
@@ -1650,6 +1652,7 @@ function poseLegs(){ const P=LEG_POSE[SLED.form];
 const ROPE_A={bobsled:[0.16,0.3,-1.15],toboggan:[0.24,0.33,-1.47],racer:[0.3,0.03,-1.22],saucer:[0.44,0.15,-1.02],tube:[0.4,0.22,-1.0]};
 const _ra=new T.Vector3(), _rb=new T.Vector3(), _rm2=new T.Vector3();
 const HAND_OFF={bobsled:[0.05,-0.06,0.12],toboggan:[0,0,0],racer:[0,-0.03,0],saucer:[0.13,-0.23,-0.17],tube:[0.09,-0.14,-0.16]};   // where the hands rest on each sled
+const seatUp=()=>SLED&&SLED.id==='sleigh'?0.62:0;   // Santa's sleigh: a raised seat so you can see over the reindeer
 const DECK_OFF={bobsled:[0.02,0,0],toboggan:[0,0,0],racer:[0.03,-0.06,0],saucer:[0.03,-0.08,-0.05],tube:[0.04,-0.1,-0.02]};   // seat height, fore-aft and view tilt so each sled's front sits in view
 function updateRopes(){ const A=ROPE_A[SLED.form], show=SLED.form==='toboggan'||SLED.form==='racer'||SLED.form==='bobsled', rein=SLED.id==='sleigh'&&team.on; for (const r of ropes){ r.s1.visible=r.s2.visible=show; } if (!show) return;
   for (let i=0;i<ropes.length;i++){ const r=ropes[i]; arms[i].anchor.getWorldPosition(_rb); deck.worldToLocal(_rb); if (rein){ team.rein[1-i].getWorldPosition(_ra); deck.worldToLocal(_ra); } else _ra.set(r.sx*A[0],A[1],A[2]);
@@ -1766,7 +1769,7 @@ function makeMitten(sx,KN){
     const seat=new T.Mesh(new T.BoxGeometry(0.56,0.03,0.5),new T.MeshStandardMaterial({color:0x222428,roughness:0.6})); seat.position.set(0,0,0.05); bs.add(seat); }
   // Santa's Sleigh, built like the real thing: a deep, flared body with swan-curved sides, a tall curved dash, a high
   // scrolled seat back, and steel runners that sweep up in front into big curls. Red lacquer, gold leaf, velvet and fur.
-  { const sl=new T.Group(); deck.add(sl); bodies.sleigh=sl; sl.position.y=0.07;   // up on its runners
+  { const sl=new T.Group(); deck.add(sl); bodies.sleigh=sl; sl.position.y=0.07-0.62; sl.scale.setScalar(1.3);   // a big sleigh: on its runners, with you up on a tall seat
     const scroll=(()=>{ const c=canvas(1024,320), g=c.getContext('2d'); const gr0=g.createLinearGradient(0,0,0,320); gr0.addColorStop(0,'#c0141d'); gr0.addColorStop(1,'#7c0a11'); g.fillStyle=gr0; g.fillRect(0,0,1024,320);
       g.strokeStyle='#e9bd4c'; g.lineCap='round'; g.lineJoin='round';
       const curl=(x0,y0,s,dir)=>{ g.beginPath(); for (let a=0;a<=Math.PI*3.4;a+=0.06){ const r=(3+a*6)*s; g.lineTo(x0+Math.cos(a*dir)*r,y0+Math.sin(a*dir)*r*0.8); } g.stroke(); };
@@ -1817,10 +1820,12 @@ function makeMitten(sx,KN){
     const brC=[]; for (let k=0;k<=16;k++){ const a=-Math.PI*0.5+0.3+(Math.PI-0.6)*k/16; brC.push(new T.Vector3(Math.sin(a)*0.44,0.86,Math.cos(a)*0.185)); }
     const broll=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(brC),40,0.032,10,false),gold); broll.position.set(0,0,0.58); sl.add(broll);
     // tufted velvet seat and back cushion, and a fur-trimmed blanket over your lap
-    const seat=new T.Mesh(new T.BoxGeometry(0.76,0.12,0.5),velvet); seat.position.set(0,0.06,0.3); sl.add(seat);
-    const cush=new T.Mesh(new T.BoxGeometry(0.72,0.5,0.1),velvet); cush.position.set(0,0.42,0.55); cush.rotation.x=-0.18; sl.add(cush);
-    const blanket=new T.Mesh(new T.BoxGeometry(0.76,0.04,0.78),velvet); blanket.position.set(0,0.31,-0.72); blanket.rotation.x=0.16; sl.add(blanket);
-    const trim=new T.Mesh(new T.CylinderGeometry(0.045,0.045,0.78,10),fur); trim.rotation.z=Math.PI/2; trim.position.set(0,0.37,-0.36); sl.add(trim);
+    const ped=new T.Mesh(new T.BoxGeometry(0.74,0.3,0.5),red); ped.position.set(0,0.15,0.3); sl.add(ped);   // the seat stands up high...
+    const seat=new T.Mesh(new T.BoxGeometry(0.76,0.12,0.5),velvet); seat.position.set(0,0.36,0.3); sl.add(seat);
+    const cush=new T.Mesh(new T.BoxGeometry(0.72,0.42,0.1),velvet); cush.position.set(0,0.66,0.55); cush.rotation.x=-0.18; sl.add(cush);
+    const foot=new T.Mesh(new T.BoxGeometry(0.74,0.22,0.62),red); foot.position.set(0,0.11,-0.62); foot.rotation.x=0.12; sl.add(foot);   // ...with a footboard in front
+    const blanket=new T.Mesh(new T.BoxGeometry(0.76,0.04,0.78),velvet); blanket.position.set(0,0.5,-0.62); blanket.rotation.x=0.16; sl.add(blanket);
+    const trim=new T.Mesh(new T.CylinderGeometry(0.045,0.045,0.78,10),fur); trim.rotation.z=Math.PI/2; trim.position.set(0,0.56,-0.26); sl.add(trim);
     // the sack of presents riding behind the seat
     const sack=new T.Mesh(new T.SphereGeometry(0.34,20,16),new T.MeshStandardMaterial({color:0x8a5a34,roughness:1})); sack.scale.set(1,0.95,0.85); sack.position.set(0,0.5,0.98); sl.add(sack);
     for (const [x,y,z,c,sz] of [[-0.13,0.88,0.94,0x1d6b2e,0.16],[0.13,0.84,1.0,0x1d4fb8,0.14],[0.02,0.93,1.08,0xd9a51e,0.12]]){ const b=new T.Mesh(new T.BoxGeometry(sz,sz,sz),new T.MeshStandardMaterial({color:c,roughness:0.5})); b.position.set(x,y,z); b.rotation.set(0.3,x*4,0.2); sl.add(b);
@@ -2116,8 +2121,8 @@ function buildTeam(){ if (team.list) return; team.list=[makeCritter('reindeer'),
   for (let i=0;i<2;i++){ const a=new T.Object3D(); a.position.set(0,1.0,-0.42); team.list[i].g.add(a); team.rein.push(a);
     const tr=new T.Mesh(new T.CylinderGeometry(0.012,0.012,1.2,5),leather); tr.rotation.x=Math.PI/2; tr.position.set(0,1.0,1.2); team.list[i].g.add(tr); }   // traces up to Rudolph
   for (const c of team.list) for (const L of c.legs) L.up.rotation.x=0; }
-function jingle(){ if (!AC||muted) return; const t=AC.currentTime;
-  for (let k=0;k<3;k++){ const f=rr(2500,3700), at=t+R()*0.06; tone(master,'sine',f,at,0.32,0.018,0.002); tone(master,'sine',f*2.76,at,0.16,0.007,0.002); } }
+function jingle(){ if (!AC||muted) return; const t=AC.currentTime, lead=team.list&&team.list[2], d=lead&&XR.on?spatOut(lead.g.position.x,lead.g.position.y+1.1,lead.g.position.z):master;
+  for (let k=0;k<3;k++){ const f=rr(2500,3700), at=t+R()*0.06; tone(d,'sine',f,at,0.32,0.018,0.002); tone(d,'sine',f*2.76,at,0.16,0.007,0.002); } }
 function updateTeam(dt){
   const want=SLED.id==='sleigh'&&(state==='play'||state==='crash'||state==='over');
   if (want&&!team.list) buildTeam(); if (!team.list){ team.on=false; return; }
@@ -2437,7 +2442,7 @@ const SB={id:null,front:1.4,bot:0.3};
 function measureSled(){ const b=bodies[SLED.id]; if (!b) return; camera.updateMatrixWorld(true); const fx=Math.sin(heading), fz=Math.cos(heading), cp=camera.position; let mx=0.9, lo=0;
   const bb=new T.Box3(); b.traverse(o=>{ if (!o.isMesh||!o.geometry) return; if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); bb.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
     for (const x of [bb.min.x,bb.max.x]) for (const z of [bb.min.z,bb.max.z]) mx=Math.max(mx,(x-cp.x)*fx+(z-cp.z)*fz); lo=Math.min(lo,bb.min.y-cp.y); });
-  SB.id=SLED.id; SB.front=mx; SB.bot=Math.max(0,-(lo+0.98-tuckAmt*0.2-sinkNow)); }
+  SB.id=SLED.id; SB.front=mx; SB.bot=Math.max(0,-(lo+0.98+seatUp()-tuckAmt*0.2-sinkNow)); }
 function updateTrench(dt){
   if (SB.id!==SLED.id && state==='play') measureSled();
   const NF=SB.front-0.08, DP=sinkNow>0.04?trFloor():0;   // the bulge builds just past the tip, so the nose is always in view   // the trench reaches just past the nose and is cut deep enough for the whole sled
@@ -2522,7 +2527,7 @@ function renderFrame(){
 }
 
 /* ---------------- audio ---------------- */
-let AC=null, master=null, windG, windF, hissG, hissF, rumG, avG=null, rocketG=null, NB=null, muted=false;
+let AC=null, master=null, windP=null, windG, windF, hissG, hissF, rumG, avG=null, rocketG=null, NB=null, muted=false;
 try { muted=localStorage.getItem('sledMute')==='1'; } catch(e){}
 function initAudio(){
   if (AC) { if (AC.state==='suspended') AC.resume(); return; }
@@ -2530,7 +2535,7 @@ function initAudio(){
   NB=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate); const d=NB.getChannelData(0); let b=0; for(let i=0;i<d.length;i++){ const w=Math.random()*2-1; b=0.97*b+0.03*w; d[i]=w*0.6+b*2.2; }
   const loop=()=>{ const s=AC.createBufferSource(); s.buffer=NB; s.loop=true; s.start(0,Math.random()*1.5); return s; };
   master=AC.createGain(); master.gain.value=muted?0:0.75*SETTINGS.vol; master.connect(AC.destination);
-  windF=AC.createBiquadFilter(); windF.type='bandpass'; windF.Q.value=0.6; windG=AC.createGain(); windG.gain.value=0; loop().connect(windF).connect(windG).connect(master);
+  windF=AC.createBiquadFilter(); windF.type='bandpass'; windF.Q.value=0.6; windG=AC.createGain(); windG.gain.value=0; loop().connect(windF).connect(windG); windP=AC.createStereoPanner?AC.createStereoPanner():null; if (windP) windG.connect(windP).connect(master); else windG.connect(master);
   hissF=AC.createBiquadFilter(); hissF.type='highpass'; hissF.frequency.value=1800; hissG=AC.createGain(); hissG.gain.value=0; loop().connect(hissF).connect(hissG).connect(master);
   const rkf=AC.createBiquadFilter(); rkf.type='bandpass'; rkf.frequency.value=420; rkf.Q.value=0.7; rocketG=AC.createGain(); rocketG.gain.value=0; loop().connect(rkf).connect(rocketG).connect(master);
   const rf=AC.createBiquadFilter(); rf.type='lowpass'; rf.frequency.value=160; rumG=AC.createGain(); rumG.gain.value=0; loop().connect(rf).connect(rumG).connect(master);
@@ -2595,10 +2600,16 @@ function updateMusic(){ if (!MUS||!AC) return; const now=AC.currentTime;
   for (const k in tg) MUS.L[k].gain.setTargetAtTime(tg[k],now,0.5); }
 function setMusic(on){ musicOn=on; try{ localStorage.setItem('sledMusic',on?'1':'0'); }catch(e){} if (MUS) MUS.out.gain.setTargetAtTime(on?SETTINGS.music:0,AC.currentTime,0.1);
   const b=$('musicBtn'); b.style.opacity=on?'1':'0.45'; b.setAttribute('aria-label',on?'Music on':'Music off'); }
+// 3D sound in the headset: the yeti's roar and the sleigh bells come from where they really are
+function spatialListener(p,q){ if (!AC) return; const L=AC.listener; _hf.set(0,0,-1).applyQuaternion(q); _hu.set(0,1,0).applyQuaternion(q);
+  try { if (L.positionX){ const t=AC.currentTime; L.positionX.setValueAtTime(p.x,t); L.positionY.setValueAtTime(p.y,t); L.positionZ.setValueAtTime(p.z,t); L.forwardX.setValueAtTime(_hf.x,t); L.forwardY.setValueAtTime(_hf.y,t); L.forwardZ.setValueAtTime(_hf.z,t); L.upX.setValueAtTime(_hu.x,t); L.upY.setValueAtTime(_hu.y,t); L.upZ.setValueAtTime(_hu.z,t); }
+    else { L.setPosition(p.x,p.y,p.z); L.setOrientation(_hf.x,_hf.y,_hf.z,_hu.x,_hu.y,_hu.z); } } catch(e){} }
+function spatOut(x,y,z){ if (!XR.on||!AC||!AC.createPanner) return master; try { const pn=AC.createPanner(); pn.panningModel='HRTF'; pn.distanceModel='inverse'; pn.refDistance=1e4; pn.rolloffFactor=0;   // direction only: loudness already follows distance
+  if (pn.positionX){ pn.positionX.value=x; pn.positionY.value=y; pn.positionZ.value=z; } else pn.setPosition(x,y,z); pn.connect(master); return pn; } catch(e){ return master; } }
 function sfx(kind,strength=1){
   if (!AC||!master) return; const t=AC.currentTime;
   if (kind==='roar'){ // low growl: detuned saws through a moving formant filter, plus breath noise
-    const out=AC.createGain(); out.gain.setValueAtTime(0.0001,t); out.gain.exponentialRampToValueAtTime(0.55*strength,t+0.15); out.gain.setValueAtTime(0.55*strength,t+0.9); out.gain.exponentialRampToValueAtTime(0.0001,t+1.7); out.connect(master);
+    const out=AC.createGain(); out.gain.setValueAtTime(0.0001,t); out.gain.exponentialRampToValueAtTime(0.55*strength,t+0.15); out.gain.setValueAtTime(0.55*strength,t+0.9); out.gain.exponentialRampToValueAtTime(0.0001,t+1.7); out.connect(yeti.active?spatOut(yeti.g.position.x,yeti.g.position.y+1.6,yeti.g.position.z):master);
     const f=AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=3; f.frequency.setValueAtTime(380,t); f.frequency.linearRampToValueAtTime(700,t+0.5); f.frequency.linearRampToValueAtTime(300,t+1.6); f.connect(out);
     const lfo=AC.createOscillator(), lg=AC.createGain(); lfo.frequency.value=23; lg.gain.value=9; lfo.connect(lg);
     for (const fr of [62,64.5,93]){ const o=AC.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(fr*1.25,t); o.frequency.exponentialRampToValueAtTime(fr*0.8,t+1.6); lg.connect(o.frequency); o.connect(f); o.start(t); o.stop(t+1.75); }
@@ -2785,6 +2796,7 @@ function landed(hit,at){
   if (at>0.25||hit>2.5) landingPuff(str*(SURF.spray>1?1.2:1));
   const sketchy=judged&&(Math.abs(dp)>0.52*tol||Math.abs(dr)>0.46*tol||dy>0.75*tol||se>0.5*tol||handsUp>0.5);
   const didTrick=scoreLanding(at,sketchy);
+  if (XR.on){ vrBuzz(clamp(0.12+hit/16+at*0.08,0,1),Math.round(28+Math.min(hit,20)*6)); if (didTrick&&!sketchy) setTimeout(()=>vrBuzz(0.5,45),110); }
   heading+=sw; camYaw+=sw; camPitch+=fw; trickReset();
   let loss=clamp((hit-2.5)*0.025,0,0.3);
   if (sketchy){ loss+=0.15; landWobble=0.55; heading+=(R()-0.5)*0.3; }
@@ -2850,7 +2862,7 @@ function collide(){
       if (d<trunk && invuln<=0 && sp>2.5){ crash('Hit a tree'); return; }
       if (d<trunk && sp<=2.5){ vx*=-0.2; vz*=-0.2; continue; }
       const branch=(o.type==='pine'?2.1:1.1)*o.s;
-      if (!o.nm && d<branch && d>=trunk && sp>8){ o.nm=true; nearMiss++; if(o.type==='pine'){ if (surfNow==='powder') snowBomb(o,d<branch*0.75); else { treeShake(o); if (d<branch*0.7) sledDeposit(8,'all'); } vx*=0.97; vz*=0.97; } sfx('brush',0.8); comboAdd(150,'Close call'); } } }
+      if (!o.nm && d<branch && d>=trunk && sp>8){ o.nm=true; nearMiss++; if (XR.on) vrBuzz(0.3,30,((o.x-px)*Math.cos(heading)-(o.z-pz)*Math.sin(heading))>0?'left':'right'); if(o.type==='pine'){ if (surfNow==='powder') snowBomb(o,d<branch*0.75); else { treeShake(o); if (d<branch*0.7) sledDeposit(8,'all'); } vx*=0.97; vz*=0.97; } sfx('brush',0.8); comboAdd(150,'Close call'); } } }
   if (yeti.active){ const yx=cx(yeti.z)+yeti.u, d=Math.hypot(px-yx,pz-yeti.z);
     if (d<1.35 && hAbove<2.6 && invuln<=0){ crash(yeti.mode==='chase'?'Caught by the yeti':'Flattened by the yeti'); return; }
     if (!yeti.nm && d<4.5 && d>=1.35){ yeti.nm=true; nearMiss++; comboAdd(500,'Yeti dodge'); toast('That was <em>too</em> close'); } }
@@ -2879,7 +2891,7 @@ function faceSnow(k){ paintSplat(k); const el=$('dump'); el.style.transition='no
   for(let i=0;i<Math.round(40*k);i++) emitChunk(px+fx*rr(0.3,1.2)+rr(-0.6,0.6),py+rr(0.7,1.3),pz+fz*rr(0.3,1.2)+rr(-0.6,0.6),vx*0.93,rr(0,1.5),vz*0.93,1,0.6,[0.015,0.04]); }
 function crash(reason){
   if (state!=='play') return; $('gauge').hidden=true; shakeOff(); loseCombo(); trickReset(); handsUp=0;
-  state='crash'; crashT=0; crashes++; RUN.clean=false; renderPips(); tumble=0; sfx('crash',1.3); crashReason=reason;
+  vrBuzz(1,280); state='crash'; crashT=0; crashes++; RUN.clean=false; renderPips(); tumble=0; sfx('crash',1.3); crashReason=reason;
   emit(px,py+0.3,pz,vx*0.25,2.5,vz*0.25,180,2.2);
   const fl=$('flash'); fl.style.transition='none'; fl.style.opacity='0.9'; requestAnimationFrame(()=>requestAnimationFrame(()=>{ fl.style.transition='opacity 1.4s ease-in'; fl.style.opacity='0'; }));
   toast(reason);
@@ -2936,7 +2948,7 @@ document.addEventListener('visibilitychange',()=>{ if (document.hidden) clearKey
 /* ---------------- UI ---------------- */
 const fmt=n=>Math.floor(n).toLocaleString('en-US');
 function renderPips(){ const pp=$('pips'); if (pp.children.length!==DIFF.lives) pp.innerHTML='<i></i>'.repeat(DIFF.lives); [...pp.children].forEach((el,i)=>el.classList.toggle('gone',i<crashes)); }
-let toastTimer=0, alarmUntil=0; function toast(html,alarm){ const now=performance.now(); if (typeof XR!=='undefined'&&XR.on) xrMsg(html); if (!alarm && now<alarmUntil) return; if (alarm) alarmUntil=now+1500; const t=$('toast'); t.innerHTML=html; t.classList.toggle('alarm',!!alarm); t.classList.add('on'); lastToast=time; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'),alarm?1700:1300); }
+let toastTimer=0, alarmUntil=0; function toast(html,alarm){ const now=performance.now(); if (typeof XR!=='undefined'&&XR.on) xrFloat(html); if (!alarm && now<alarmUntil) return; if (alarm) alarmUntil=now+1500; const t=$('toast'); t.innerHTML=html; t.classList.toggle('alarm',!!alarm); t.classList.add('on'); lastToast=time; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'),alarm?1700:1300); }
 let fpsW=0, fpsWN=0, manualQ=false, fpsAcc=0, fpsN=0, autoTuned=false, keysT=0, runLive=false, lastEarned=0;
 try { autoTuned=localStorage.getItem('sledQuality')!==null; } catch(e){}
 function clearHazards(){ noseLight.intensity=0; $('glare').style.opacity='0'; yeti.active=false; yeti.g.visible=false; for (const c of critters){ c.active=false; c.g.visible=false; } for (const a of AVAL) a.done=true; avNow=null; clearCracks(); $('chase').hidden=true; $('gauge').hidden=true; }
@@ -3615,7 +3627,8 @@ function update(dt){
   sprayGeo.attributes.position.needsUpdate=true; sprayGeo.attributes.aLife.needsUpdate=true; sprayGeo.attributes.aSize.needsUpdate=true; sprayGeo.attributes.aShade.needsUpdate=true; sprayGeo.attributes.aKind.needsUpdate=true;
   updateSnowfall(dt);
   if (AC&&master&&windG){ const t=AC.currentTime, ground=onGround&&state==='play';
-    windG.gain.setTargetAtTime((Math.min(0.8,Math.pow(sp/26,2)*0.7)+0.02+(COND.wind?(0.22+0.12*noise2(time*0.4,1))*COND.wind:0))*(tucking?0.65:1)*(musicOn?0.72:1),t,0.12); windF.frequency.setTargetAtTime((260+sp*32)*(tucking?0.75:1),t,0.12);
+    const side=XR.on?Math.sin(XR.headYaw||0):0; if (windP) windP.pan.setTargetAtTime(side*0.75,t,0.08);   // turn your head and the rush of air moves to the other ear
+    windG.gain.setTargetAtTime((Math.min(0.8,Math.pow(sp/26,2)*0.7)+0.02+(COND.wind?(0.22+0.12*noise2(time*0.4,1))*COND.wind:0))*(tucking?0.65:1)*(musicOn?0.72:1)*(1+0.35*Math.abs(side)),t,0.12); windF.frequency.setTargetAtTime((260+sp*32)*(tucking?0.75:1),t,0.12);
     hissG.gain.setTargetAtTime(ground?Math.min(0.32,sp/28*0.24)*(onIceNow?1.5:1)*(brake?2:1)*(1+carve*1.3)*(surfNow==='crust'?1.6:surfNow==='powder'?0.6:1):0,t,0.04); hissF.frequency.setTargetAtTime(onIceNow?3800:(surfNow==='crust'?2600:surfNow==='powder'?1100:1700)+sp*30,t,0.1);
     rumG.gain.setTargetAtTime(ground?Math.min(0.6,sp/25*0.45):0,t,0.05); }
   hudT-=dt; if (hudT<=0 && (state==='play'||state==='crash')){ hudT=0.08; const mph=Math.round(sp*2.237);
@@ -3645,7 +3658,7 @@ function chaseCam(dt){
   { const P=LEG_POSE[SLED.form], hip=new T.Vector3(0,deck.position.y+P[0][1]+0.04,deck.position.z+P[0][2]), shd=new T.Vector3(0,-0.3,0.12-tuckAmt*0.05);
     placeSeg(avatar.userData.torso,hip,shd); avatar.userData.sh.position.copy(shd); avatar.userData.head.position.set(0,-0.06-tuckAmt*0.05,0.06); }
   const sp=speedNow(), vh=sp>1?Math.atan2(vx,vz):heading; if (!chOn) chYaw=vh; chYaw+=angDiff(vh,chYaw)*Math.min(1,dt*3);
-  const back=4.6+Math.min(1.6,sp*0.03), up=1.75, fx=Math.sin(chYaw), fz=Math.cos(chYaw);
+  const back=4.6+Math.min(1.6,sp*0.03)+seatUp()*0.8, up=1.75+seatUp()*0.7, fx=Math.sin(chYaw), fz=Math.cos(chYaw);
   const tx=px-fx*back, tz=pz-fz*back, ty=Math.max(gH(tx,tz)+0.8,py+up);
   if (!chOn){ chPos.set(tx,ty,tz); chLook.set(px,py+0.6,pz); if (dress) chPos.set(px+fx*2.3,py+0.95,pz+fz*2.3); } chOn=true;
   if (!dress){ chPos.lerp(_dv.set(tx,ty,tz),Math.min(1,dt*8)); chLook.lerp(_dl.set(px+fx*2.5,py+0.55,pz+fz*2.5),Math.min(1,dt*10)); }
@@ -3671,10 +3684,10 @@ function updateCamera(dt){
   if (!onGround && state==='play') rollT=sRoll;
   camRoll+=(rollT-camRoll)*Math.min(1,dt*(onGround?4:8));
   joltV+=(-jolt*90-joltV*12)*dt; jolt+=joltV*dt;
-  const rough=onGround&&state!=='crash'?Math.min(1,sp/24):0, rat=(reduceMotion?0.35:1)*rough;
+  const rough=onGround&&state!=='crash'&&!XR.on?Math.min(1,sp/24):0, rat=(reduceMotion?0.35:1)*rough;   // no camera shake in the headset (the controllers rumble instead)
   const shakeY=(noise2(pz*1.3,3.1)*0.03+noise2(pz*4.1,7)*0.012)*rat*(onIceNow?0.3:1);
   const shakeP=noise2(pz*2.2,11)*0.012*rat, shakeR=noise2(pz*1.7,17)*0.01*rat;
-  let ex=px+Math.sin(camYaw)*tuckAmt*0.42, ey=py+0.98-tuckAmt*0.2+shakeY+jolt*0.12-sinkNow, ez=pz+Math.cos(camYaw)*tuckAmt*0.42, pitch=camPitch-tuckAmt*0.06+shakeP+jolt*0.04+DECK_OFF[SLED.form][2], roll=camRoll+shakeR, yaw=camYaw+groundSpin;
+  let ex=px+Math.sin(camYaw)*tuckAmt*0.42, ey=py+0.98+seatUp()-tuckAmt*0.2+shakeY+jolt*(XR.on?0.035:0.12)-sinkNow, ez=pz+Math.cos(camYaw)*tuckAmt*0.42, pitch=camPitch-tuckAmt*0.06+shakeP+jolt*0.04+DECK_OFF[SLED.form][2], roll=camRoll+shakeR, yaw=camYaw+groundSpin;
   if (state==='crash'){ const t=Math.min(1,tumble/0.9), k=reduceMotion?0.3:1; roll+=Math.sin(tumble*5)*1.2*(1-t)*k+t*0.9; pitch+=-0.9*t-Math.sin(tumble*6)*0.4*(1-t)*k; ey=lerp(ey,gH(px,pz)+0.35,t); yaw+=Math.sin(tumble*3)*0.6*(1-t)*k; }
   if (state==='play' && !onGround){ yaw+=spinOff; pitch+=flipOff; }
   if (!onGround || state!=='play') handsUp=state==='play'?handsUp:0; else handsUp=Math.max(0,handsUp-dt*6);
@@ -3721,6 +3734,14 @@ scene.add(XR.dolly); renderer.xr.enabled=true; renderer.xr.setReferenceSpaceType
   const vc=canvas(256,256), g=vc.getContext('2d'), gr=g.createRadialGradient(128,128,40,128,128,128); gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(0.55,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,1)'); g.fillStyle=gr; g.fillRect(0,0,256,256);
   XR.vig=new T.Mesh(new T.PlaneGeometry(0.5,0.5),new T.MeshBasicMaterial({map:tex(vc,false,false),transparent:true,opacity:0,depthTest:false,depthWrite:false})); XR.vig.position.z=-0.12; XR.vig.renderOrder=1000; XR.vig.visible=false; camera.add(XR.vig);
 })();
+// rumble in the controllers: landings by how hard you hit, crashes, close calls, a light buzz over rough snow
+function vrBuzz(v,ms,side){ const ses=XR.session; if (!ses) return; for (const src of ses.inputSources){ if (side&&src.handedness!==side) continue; const h=src.gamepad&&src.gamepad.hapticActuators&&src.gamepad.hapticActuators[0]; if (h&&h.pulse) try{ h.pulse(clamp(v,0,1),ms); }catch(e){} } }
+// trick scores and landing calls float up out in front of you instead of sitting on the dashboard
+const XF=(()=>{ const c=canvas(1024,192), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.6,0.3),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0})); m.renderOrder=998; m.visible=false; XR.dolly.add(m); return {c,t,m,life:0}; })();
+function xrFloat(html){ const txt=String(html).replace(/<[^>]+>/g,''), em=(String(html).match(/<em>(.*?)<\/em>/)||[])[1], g=XF.c.getContext('2d'); g.clearRect(0,0,1024,192);
+  g.textAlign='center'; g.textBaseline='middle'; g.font='800 84px "Barlow Condensed", Arial, sans-serif'; g.lineWidth=10; g.strokeStyle='rgba(10,16,24,0.75)'; g.strokeText(txt.slice(0,30),512,96);
+  g.fillStyle=em&&txt.indexOf(em)===0?'#ffc35a':'#ffffff'; g.fillText(txt.slice(0,30),512,96); XF.t.needsUpdate=true; XF.life=1.8; XF.m.visible=true; }
+function updateXF(dt){ if (XF.life<=0){ XF.m.visible=false; return; } XF.life-=dt; const k=1-XF.life/1.8; XF.m.position.set(0,0.05+k*0.35,-2.3); XF.m.material.opacity=Math.min(1,XF.life*2)*Math.min(1,k*8); }
 function xrMsg(html){ XR.msg=String(html).replace(/<[^>]+>/g,''); XR.msgT=2.2; }
 function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512,256);
   const panel=(y,h)=>{ g.fillStyle='rgba(13,20,28,0.62)'; g.beginPath(); g.roundRect?g.roundRect(8,y,496,h,22):g.rect(8,y,496,h); g.fill(); };
@@ -3728,7 +3749,7 @@ function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512
   if (state==='over'||state==='pause'){ panel(8,240); g.textAlign='center';
     g.font='800 44px "Barlow Condensed", Arial, sans-serif'; g.fillText(state==='over'?'RUN OVER':'PAUSED',256,46);
     g.font='600 26px Arial, sans-serif'; g.fillText(state==='over'?(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft · score '+fmt(score)+(lastEarned?' · +'+fmt(lastEarned)+' coins':'')):'',256,96);
-    g.fillStyle='#ffc35a'; g.font='700 26px Arial, sans-serif'; g.fillText(state==='over'?'A: ride again':'Y: keep riding',256,150); g.fillStyle='#f4f7fa'; g.fillText('B: leave VR',256,190); g.font='600 21px Arial, sans-serif'; g.fillStyle='#c9d3dc'; g.fillText('X: '+(SETTINGS.vrComfort?'comfort view (level in tricks)':'full view (ride the tricks)'),256,228);
+    g.fillStyle='#ffc35a'; g.font='700 26px Arial, sans-serif'; g.fillText(state==='over'?'A: ride again':'Y: keep riding',256,150); g.fillStyle='#f4f7fa'; g.fillText('B: leave VR',256,190); g.font='600 21px Arial, sans-serif'; g.fillStyle='#c9d3dc'; g.fillText('X: comfort '+CF_NAME[SETTINGS.vrCF]+' · right stick: lean steer '+(SETTINGS.vrLean?'on':'off'),256,228);
   } else { panel(132,116); g.textAlign='left';
     g.font='800 64px "Barlow Condensed", Arial, sans-serif'; g.fillText(Math.round(speedNow()*2.237)+'',30,192); g.font='600 22px Arial, sans-serif'; g.fillText('mph',30+g.measureText('000').width*1.9,204);
     g.textAlign='right'; g.font='700 30px Arial, sans-serif'; g.fillText(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft',486,166); g.font='600 22px Arial, sans-serif'; g.fillStyle='#c9d3dc';
@@ -3739,25 +3760,44 @@ function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)
   for (const src of ses.inputSources){ const gp=src.gamepad; if (!gp) continue; const L=src.handedness==='left', ax=gp.axes[2]||0, ay=gp.axes[3]||0, b=i=>!!gp.buttons[i]?.pressed;
     const dz=(v,d)=>Math.abs(v)<d?0:Math.sign(v)*(Math.abs(v)-d)/(1-d);   // a resting thumb never counts as input
     if (Math.abs(ax)>0.2) padSteer=dz(ax,0.2); if (Math.abs(ay)>0.3) padPitch=dz(ay,0.3);
+    if (!L && pressed('RS',b(3))){ SETTINGS.vrLean=!SETTINGS.vrLean; saveSettings(); XR.leanInit=false; xrMsg(SETTINGS.vrLean?'Lean to steer: on':'Lean to steer: off'); XR.hudT=0; }
     if (b(1)) padTrick=true;
-    if (L){ if (pressed('LS',b(3))) cycleVRLevel(); if (b(0)) padBrake=true; if (pressed('X',b(4))){ if (state==='pause'||state==='over'){ SETTINGS.vrComfort=!SETTINGS.vrComfort; saveSettings(); xrMsg(SETTINGS.vrComfort?'Comfort view: tricks keep your view level':'Full view: you ride the tricks'); XR.hudT=0; } else setGoggles(!SETTINGS.goggles); } if (pressed('Y',b(5))) togglePause(); }
-    else { if (b(0)) padTuck=true; const a=pressed('A',b(4)); if (a){ if (state==='play') hopReq=0.15; else if (state==='over') startGame(); } if (pressed('B',b(5)) && (state==='over'||state==='pause')) ses.end(); } } }
+    if (L){ if (pressed('LS',b(3))) cycleVRLevel(); if (b(0)) padBrake=true; if (pressed('X',b(4))){ if (state==='pause'||state==='over'){ SETTINGS.vrCF=(SETTINGS.vrCF+1)%3; saveSettings(); xrMsg('Comfort: '+CF_NAME[SETTINGS.vrCF]); XR.hudT=0; } else setGoggles(!SETTINGS.goggles); } if (pressed('Y',b(5))) togglePause(); }
+    if (!L){ if (b(0)) padTuck=true; const a=pressed('A',b(4)); if (a){ if (state==='play'){ hopReq=0.15; vrBuzz(0.18,22,'right'); } else if (state==='over') startGame(); } if (pressed('B',b(5)) && (state==='over'||state==='pause')) ses.end(); } }
+  if (SETTINGS.vrLean && state==='play' && onGround && XR.lean) padSteer=clamp(padSteer+XR.lean,-1,1); }   // lean your body into the turn (adds to the stick)
 function xrPre(dt){ // the sled carries the dolly; the headset adds your own head movement on top
   XR.E.copy(camera.position); XR.Q.copy(camera.quaternion);
-  const air=state==='play'&&!onGround, full=!SETTINGS.vrComfort, DO=DECK_OFF[SLED.form];
+  const air=state==='play'&&!onGround, full=SETTINGS.vrCF<2, DO=DECK_OFF[SLED.form], cf=[0.55,1,1.45][SETTINGS.vrCF]||1;
+  // comfort: smooth out the small, fast up-and-down jiggle from bumps (your inner ear hates that most); big moves still come straight through
+  if (!XR.syOk || Math.abs(XR.E.y-XR.sy)>1.5) XR.sy=XR.E.y; XR.sy+=(XR.E.y-XR.sy)*Math.min(1,dt*(air?20:11)); XR.sy=clamp(XR.sy,XR.E.y-0.12,XR.E.y+0.12); XR.syOk=true;
+  const EP=_xe.set(XR.E.x,XR.sy,XR.E.z);
   const yawB=camYaw+groundSpin+Math.PI+(air?spinOff:0), pitchB=camPitch-tuckAmt*0.06+DO[2]+(air?flipOff:0), rollB=air?camRoll:camRoll*0.4;   // the sled exactly as it is, spins and flips included
   // your view rides the sled through spins, flips and tilts in the air just like on the computer (on the ground it stays level for comfort)
   const tp=air&&full?flipOff:0, tr=air&&full?camRoll:0, k=Math.min(1,dt*(air?16:8));
   XR.vp-=Math.round((XR.vp-tp)/TAU)*TAU; XR.vp+=(tp-XR.vp)*k; XR.vr+=(tr-XR.vr)*k;
-  XR.dolly.position.copy(XR.E); XR.dolly.rotation.set(XR.vp,full?yawB:camYaw+groundSpin+Math.PI,XR.vr,'YXZ');
+  XR.dolly.position.copy(EP); XR.dolly.rotation.set(XR.vp,full?yawB:camYaw+groundSpin+Math.PI,XR.vr,'YXZ');
   if (rig.parent!==fpAnchor){ fpAnchor.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
-  fpAnchor.position.copy(XR.E); fpAnchor.rotation.set(pitchB,yawB,rollB,'YXZ'); rig.visible=state!=='crash';
+  fpAnchor.position.copy(EP); fpAnchor.rotation.set(pitchB,yawB,rollB,'YXZ'); rig.visible=state!=='crash';
   if (XR.hud.parent!==fpAnchor) fpAnchor.add(XR.hud); XR.hud.position.set(0,-0.42,-0.62); XR.hud.rotation.set(-0.55,0,0); XR.hud.visible=true;
   if (state==='over'||state==='pause'){ XR.hud.position.set(0,0.02,-0.9); XR.hud.rotation.set(0,0,0); XR.hud.scale.setScalar(1.6); } else XR.hud.scale.setScalar(1);
   XR.msgT-=dt; XR.hudT-=dt; if (XR.hudT<=0){ XR.hudT=0.15; drawXRHud(); }
-  const sp=speedNow(); XR.vig.visible=true; XR.vig.material.opacity=state==='play'?Math.min(0.85,clamp((sp-14)/30,0,0.75)+(onGround?0:0.15)+(!onGround&&!SETTINGS.vrComfort?clamp((Math.abs(spinRate)+Math.abs(flipRate))/14,0,0.3):0)):state==='crash'?0.6:0;
+  // comfort edges: the view narrows softly when the motion your eyes see is strongest (speed, turning, tricks, drops) and opens back up when it calms
+  const sp=speedNow(), yr=Math.abs(angDiff(camYaw+groundSpin,XR.lastYaw??camYaw))/Math.max(dt,1e-3); XR.lastYaw=camYaw+groundSpin; XR.yr=(XR.yr||0)+(yr-(XR.yr||0))*Math.min(1,dt*6);
+  const fall=air?clamp(-vy/14,0,1):0, trick=air&&full?clamp((Math.abs(spinRate)+Math.abs(flipRate))/10,0,1):0;
+  let vg=state==='play'?(clamp((sp-12)/32,0,0.5)+clamp(XR.yr/2.2,0,0.45)+fall*0.25+trick*0.4)*cf:state==='crash'?0.85:0;
+  XR.vg=(XR.vg||0)+(Math.min(0.88,vg)-(XR.vg||0))*Math.min(1,dt*(vg>(XR.vg||0)?7:2.5)); XR.vig.visible=true; XR.vig.material.opacity=XR.vg;
+  updateXF(dt);
+  XR.rumT=(XR.rumT||0)-dt; if (XR.rumT<=0){ XR.rumT=0.11; if (state==='play'&&onGround&&sp>9) vrBuzz((0.03+0.05*clamp((sp-9)/20,0,1))*(surfNow==='crust'?1.8:surfNow==='powder'?0.6:1)*(onIce(px,pz)?0.4:1),60); }
   camera.position.set(0,0,0); camera.quaternion.identity(); camera.updateMatrixWorld(true); }
-function xrPost(){ camera.position.copy(XR.E); camera.quaternion.copy(XR.Q); }
+const _xe=new T.Vector3(), _xq=new T.Euler(), _hw=new T.Vector3(), _hf=new T.Vector3(), _hu=new T.Vector3();
+function xrPost(dt){
+  // the headset's pose (local to the sled) is in the camera right after rendering: use it for lean steering, 3D sound and the wind in your ears
+  if (XR.session){ const hx=camera.position.x, e=_xq.setFromQuaternion(camera.quaternion,'YXZ'), roll=e.z;
+    if (!XR.leanInit || state!=='play'){ XR.lbx=hx; XR.lbr=roll; XR.leanInit=state==='play'; }
+    XR.lbx+=(hx-XR.lbx)*Math.min(1,(dt||0.014)/8); XR.lbr+=(roll-XR.lbr)*Math.min(1,(dt||0.014)/8);   // your neutral posture drifts slowly with you
+    const raw=(hx-XR.lbx)/0.14-(roll-XR.lbr)/0.32; XR.lean=Math.abs(raw)<0.3?0:clamp(Math.sign(raw)*(Math.abs(raw)-0.3)/0.7,-1,1);
+    XR.headYaw=e.y; camera.matrixWorld.decompose(_hw,_xe.q||(_xe.q=new T.Quaternion()),_hu); spatialListener(_hw,_xe.q); }
+  camera.position.copy(XR.E); camera.quaternion.copy(XR.Q); }
 // VR detail runs itself: the render sharpness slides up and down every second to hold the headset's frame rate, and the
 // level (how far full 3D trees reach, how much snow) steps up when there's room and down when there isn't. Click the left
 // stick to pin a level instead (Auto → Fast → Balanced → Detailed → Auto).
@@ -3819,7 +3859,7 @@ function frame(now,xf){ const rawMs=now-last, dt=Math.min(0.05,rawMs/1000); last
     if (XR.on){ xrPre(dt); vrVis();   // all around you (it's 360°): full trees close by, pictures far away
       IMP.U.uHead.value.copy(XR.E); HALO_U.uFogD.value=scene.fog.density; HALO_U.uOp.value=clamp((COND.lamp-0.3)/2,0,1)*(1-0.4*(1-SNOW.sunK)); BLOBS.visible=true; updateBlobs();
       xrAdapt(rawMs); xrViewScale(xf);
-      renderer.setRenderTarget(null); renderer.render(scene,camera); xrPost(); }
+      renderer.setRenderTarget(null); renderer.render(scene,camera); xrPost(dt); }
     else { cullChunks(); renderFrame(); } }
   catch(e){ if (frameErrs++<5) console.error('Sled of Destiny recovered from an error:',e); }   // one glitch should never freeze the game
 }
