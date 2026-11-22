@@ -2744,7 +2744,7 @@ function airControl(dt,steer,tuckKey){ // keys set how fast you rotate; hands-of
   const ctl=1-handsUp*0.5, assist=1-handsUp*0.65;   // with your hands off the rope you can't steer the sled as well
   const pRaw=trick?clamp(((keys.ArrowUp||keys.KeyW)?-1:0)+(tuckKey?1:0)+padPitch,-1,1):0, rRaw=clamp(steer,-1,1);   // ↑/↓ only flip while Shift is held; otherwise the sled keeps itself level
   const pIn=0, rIn=trick?0:rRaw*ctl;
-  const wantP=pIn*1.3+(pred.gp-sPitch)*(pIn?0.6:1.9)*assist, wantR=rIn*1.15+(pred.gr-sRoll)*(rIn?0.5:1.7)*assist;
+  const wantP=pIn*1.3+(pred.gp-sPitch)*(1.9-1.3*Math.abs(pIn))*assist, wantR=rIn*1.15+(pred.gr-sRoll)*(1.7-1.2*Math.abs(rIn))*assist;
   pitchRate+=(wantP-pitchRate)*Math.min(1,dt*6); rollRate+=(wantR-rollRate)*Math.min(1,dt*6);
   sPitch=clamp(sPitch+pitchRate*dt,-1.5,1.5); sRoll=clamp(sRoll+rollRate*dt,-1.4,1.4);
   // spins and flips: hold the trick key to whip around; let go and it eases to the nearest full rotation
@@ -2753,7 +2753,7 @@ function airControl(dt,steer,tuckKey){ // keys set how fast you rotate; hands-of
   if (trick && pRaw) flipRate+=(pRaw*5.6*SLED.flip-flipRate)*Math.min(1,dt*5);
   else { const tg=Math.round(flipOff/TAU)*TAU; flipRate+=(clamp((tg-flipOff)*2.6,-5,5)-flipRate)*Math.min(1,dt*2.8); }
   spinOff+=spinRate*dt; flipOff+=flipRate*dt; spinTot+=spinRate*dt; flipTot+=flipRate*dt;
-  if (!hintShown && (prog.hintRuns||0)<3 && time-airStart>0.7 && pred && !trick){ hintShown=true; prog.hintRuns=(prog.hintRuns||0)+1; saveProg(); toast('Hold <em>Shift</em> + arrows to spin or flip'); }
+  const hk=XR.on?'vrHintRuns':'hintRuns'; if (!hintShown && (prog[hk]||0)<3 && time-airStart>0.7 && pred && !trick){ hintShown=true; prog[hk]=(prog[hk]||0)+1; saveProg(); toast(XR.on?'Hold a <em>grip</em> + stick to spin or flip':'Hold <em>Shift</em> + arrows to spin or flip'); }
 }
 /* ---------------- score and combos ---------------- */
 function comboAdd(pts,label){ if (state!=='play') return; comboMult=Math.min(10,comboMult+1); RUN.comboMax=Math.max(RUN.comboMax||0,comboMult); comboPts+=Math.round(pts); comboT=5; comboLabel=label; renderCombo(); }
@@ -2895,7 +2895,8 @@ function respawn(){ groundSpin=groundSpinRate=groundSpinAcc=0; clearTrail(); see
 const keys={}; let padSteer=0, padPitch=0, padBrake=false, padTuck=false, padTrick=false, padHands=false, padLook=false, padJumpWas=false, padStartWas=false, hopReq=0;
 function pollPad(){
   padSteer=0; padPitch=0; padBrake=false; padTuck=false; padTrick=false; padHands=false; padLook=false; let pads=[]; try{ pads=navigator.getGamepads?navigator.getGamepads():[]; }catch(e){ return; }
-  for (const gp of pads){ if(!gp) continue; const ax=gp.axes[0]||0; padSteer=Math.abs(ax)>0.15?ax:(gp.buttons[14]?.pressed?-1:gp.buttons[15]?.pressed?1:0);
+  if (typeof XR!=='undefined' && XR.on) return;
+  for (const gp of pads){ if(!gp || gp.mapping==='xr-standard') continue; const ax=gp.axes[0]||0; padSteer=Math.abs(ax)>0.15?ax:(gp.buttons[14]?.pressed?-1:gp.buttons[15]?.pressed?1:0);
     padTrick=!!(gp.buttons[4]?.pressed||gp.buttons[5]?.pressed); padLook=!!gp.buttons[10]?.pressed||!!gp.buttons[11]?.pressed;
     padBrake=!!(gp.buttons[1]?.pressed||gp.buttons[6]?.pressed); padTuck=!!(gp.buttons[2]?.pressed||gp.buttons[7]?.pressed||gp.buttons[13]?.pressed||(gp.axes[1]||0)>0.6);
     const jb=!!(gp.buttons[0]?.pressed||(gp.buttons[12]?.pressed&&onGround)); padPitch=Math.abs(gp.axes[1]||0)>0.2?gp.axes[1]:0; if (jb&&!padJumpWas){ if(state==='play') hopReq=0.15; else if((state==='title'||state==='over')&&$('garage').hidden&&$('settings').hidden){ if (state==='title') wizardNext(); else if (!$('startBtn').disabled) startGame(); } } padJumpWas=jb;
@@ -3712,7 +3713,7 @@ let last=performance.now();
    heading turns), spins and flips don't swing your view, and a soft dark edge closes in at speed, all to keep it comfortable.
    Steer with either thumbstick · right trigger tuck · left trigger brake · A hop · hold a grip + stick for spins and flips
    · X goggles · Y pause. */
-const XR={guardT:-6,guardN:0,on:false,session:null,dolly:new T.Group(),hud:null,hudC:null,hudT:0,msg:'',msgT:0,prevQi:2,btnWas:{},E:new T.Vector3(),Q:new T.Quaternion(),vig:null};
+const XR={vp:0,vr:0,guardT:-6,guardN:0,on:false,session:null,dolly:new T.Group(),hud:null,hudC:null,hudT:0,msg:'',msgT:0,prevQi:2,btnWas:{},E:new T.Vector3(),Q:new T.Quaternion(),vig:null};
 scene.add(XR.dolly); renderer.xr.enabled=true; renderer.xr.setReferenceSpaceType('local');
 (function buildXRBits(){
   const c=canvas(512,256); XR.hudC=c; const t=tex(c,true,false); t.minFilter=T.LinearFilter;
@@ -3727,7 +3728,7 @@ function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512
   if (state==='over'||state==='pause'){ panel(8,240); g.textAlign='center';
     g.font='800 44px "Barlow Condensed", Arial, sans-serif'; g.fillText(state==='over'?'RUN OVER':'PAUSED',256,46);
     g.font='600 26px Arial, sans-serif'; g.fillText(state==='over'?(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft · score '+fmt(score)+(lastEarned?' · +'+fmt(lastEarned)+' coins':'')):'',256,96);
-    g.fillStyle='#ffc35a'; g.font='700 26px Arial, sans-serif'; g.fillText(state==='over'?'A: ride again':'Y: keep riding',256,150); g.fillStyle='#f4f7fa'; g.fillText('B: leave VR',256,196);
+    g.fillStyle='#ffc35a'; g.font='700 26px Arial, sans-serif'; g.fillText(state==='over'?'A: ride again':'Y: keep riding',256,150); g.fillStyle='#f4f7fa'; g.fillText('B: leave VR',256,190); g.font='600 21px Arial, sans-serif'; g.fillStyle='#c9d3dc'; g.fillText('X: '+(SETTINGS.vrComfort?'comfort view (level in tricks)':'full view (ride the tricks)'),256,228);
   } else { panel(132,116); g.textAlign='left';
     g.font='800 64px "Barlow Condensed", Arial, sans-serif'; g.fillText(Math.round(speedNow()*2.237)+'',30,192); g.font='600 22px Arial, sans-serif'; g.fillText('mph',30+g.measureText('000').width*1.9,204);
     g.textAlign='right'; g.font='700 30px Arial, sans-serif'; g.fillText(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft',486,166); g.font='600 22px Arial, sans-serif'; g.fillStyle='#c9d3dc';
@@ -3736,20 +3737,25 @@ function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512
   XR.hud.material.map.needsUpdate=true; }
 function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)=>{ const was=XR.btnWas[id]; XR.btnWas[id]=on; return on&&!was; };
   for (const src of ses.inputSources){ const gp=src.gamepad; if (!gp) continue; const L=src.handedness==='left', ax=gp.axes[2]||0, ay=gp.axes[3]||0, b=i=>!!gp.buttons[i]?.pressed;
-    if (Math.abs(ax)>0.18) padSteer=ax; if (Math.abs(ay)>0.25) padPitch=ay;
+    const dz=(v,d)=>Math.abs(v)<d?0:Math.sign(v)*(Math.abs(v)-d)/(1-d);   // a resting thumb never counts as input
+    if (Math.abs(ax)>0.2) padSteer=dz(ax,0.2); if (Math.abs(ay)>0.3) padPitch=dz(ay,0.3);
     if (b(1)) padTrick=true;
-    if (L){ if (pressed('LS',b(3))) cycleVRLevel(); if (b(0)) padBrake=true; if (pressed('X',b(4))) setGoggles(!SETTINGS.goggles); if (pressed('Y',b(5))) togglePause(); }
+    if (L){ if (pressed('LS',b(3))) cycleVRLevel(); if (b(0)) padBrake=true; if (pressed('X',b(4))){ if (state==='pause'||state==='over'){ SETTINGS.vrComfort=!SETTINGS.vrComfort; saveSettings(); xrMsg(SETTINGS.vrComfort?'Comfort view: tricks keep your view level':'Full view: you ride the tricks'); XR.hudT=0; } else setGoggles(!SETTINGS.goggles); } if (pressed('Y',b(5))) togglePause(); }
     else { if (b(0)) padTuck=true; const a=pressed('A',b(4)); if (a){ if (state==='play') hopReq=0.15; else if (state==='over') startGame(); } if (pressed('B',b(5)) && (state==='over'||state==='pause')) ses.end(); } } }
 function xrPre(dt){ // the sled carries the dolly; the headset adds your own head movement on top
   XR.E.copy(camera.position); XR.Q.copy(camera.quaternion);
-  const yawB=camYaw+groundSpin+Math.PI, DO=DECK_OFF[SLED.form], pitchB=camPitch-tuckAmt*0.06+DO[2];
-  XR.dolly.position.copy(XR.E); XR.dolly.rotation.set(0,yawB,0,'YXZ');
+  const air=state==='play'&&!onGround, full=!SETTINGS.vrComfort, DO=DECK_OFF[SLED.form];
+  const yawB=camYaw+groundSpin+Math.PI+(air?spinOff:0), pitchB=camPitch-tuckAmt*0.06+DO[2]+(air?flipOff:0), rollB=air?camRoll:camRoll*0.4;   // the sled exactly as it is, spins and flips included
+  // your view rides the sled through spins, flips and tilts in the air just like on the computer (on the ground it stays level for comfort)
+  const tp=air&&full?flipOff:0, tr=air&&full?camRoll:0, k=Math.min(1,dt*(air?16:8));
+  XR.vp-=Math.round((XR.vp-tp)/TAU)*TAU; XR.vp+=(tp-XR.vp)*k; XR.vr+=(tr-XR.vr)*k;
+  XR.dolly.position.copy(XR.E); XR.dolly.rotation.set(XR.vp,full?yawB:camYaw+groundSpin+Math.PI,XR.vr,'YXZ');
   if (rig.parent!==fpAnchor){ fpAnchor.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
-  fpAnchor.position.copy(XR.E); fpAnchor.rotation.set(pitchB,yawB,state==='play'&&!onGround?0:camRoll*0.4,'YXZ'); rig.visible=state!=='crash';
+  fpAnchor.position.copy(XR.E); fpAnchor.rotation.set(pitchB,yawB,rollB,'YXZ'); rig.visible=state!=='crash';
   if (XR.hud.parent!==fpAnchor) fpAnchor.add(XR.hud); XR.hud.position.set(0,-0.42,-0.62); XR.hud.rotation.set(-0.55,0,0); XR.hud.visible=true;
   if (state==='over'||state==='pause'){ XR.hud.position.set(0,0.02,-0.9); XR.hud.rotation.set(0,0,0); XR.hud.scale.setScalar(1.6); } else XR.hud.scale.setScalar(1);
   XR.msgT-=dt; XR.hudT-=dt; if (XR.hudT<=0){ XR.hudT=0.15; drawXRHud(); }
-  const sp=speedNow(); XR.vig.visible=true; XR.vig.material.opacity=state==='play'?clamp((sp-14)/30,0,0.75)+(onGround?0:0.15):state==='crash'?0.6:0;
+  const sp=speedNow(); XR.vig.visible=true; XR.vig.material.opacity=state==='play'?Math.min(0.85,clamp((sp-14)/30,0,0.75)+(onGround?0:0.15)+(!onGround&&!SETTINGS.vrComfort?clamp((Math.abs(spinRate)+Math.abs(flipRate))/14,0,0.3):0)):state==='crash'?0.6:0;
   camera.position.set(0,0,0); camera.quaternion.identity(); camera.updateMatrixWorld(true); }
 function xrPost(){ camera.position.copy(XR.E); camera.quaternion.copy(XR.Q); }
 // VR detail runs itself: the render sharpness slides up and down every second to hold the headset's frame rate, and the

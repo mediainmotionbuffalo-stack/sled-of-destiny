@@ -35,8 +35,8 @@ Open the play link in the Meta Quest Browser, set up your rider, and press **ðŸ¥
 | Right trigger | Tuck |
 | Left trigger | Brake |
 | A | Hop (and ride again after a crash-out) |
-| Grip + thumbstick | Spins and flips |
-| X | Goggles |
+| Hold grip + thumbstick in the air | Spins (left/right) and flips (forward/back) |
+| X | Goggles (when paused: switch between full view, where you ride the tricks like on the computer, and comfort view, which keeps your view level) |
 | Y | Pause |
 | B (when paused or after a run) | Leave VR |
 | Click left thumbstick | VR graphics: Auto (default, tunes itself to your headset), then Fast, Balanced or Detailed |
