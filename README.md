@@ -39,6 +39,6 @@ Open the play link in the Meta Quest Browser, set up your rider, and press **ðŸ¥
 | X | Goggles |
 | Y | Pause |
 | B (when paused or after a run) | Leave VR |
-| Click left thumbstick | VR graphics: Fast, Balanced or Detailed (steps down by itself if it stutters) |
+| Click left thumbstick | VR graphics: Auto (default, tunes itself to your headset), then Fast, Balanced or Detailed |
 
 Your coins, sleds, upgrades and best-run ghost are saved in your own browser.

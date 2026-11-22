@@ -326,7 +326,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
         <span><kbd>C</kbd></span><span>Look back</span>
         <span><kbd>V</kbd></span><span>Switch between rider view and chase view</span>
         <span><kbd>O</kbd></span><span>Goggles on or off: a little more contrast and a little farther through the snow</span>
-        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Thumbstick steer · right trigger tuck · left trigger brake · A hop · grip + stick for tricks · X goggles · Y pause · click the left stick to change VR graphics (Fast, Balanced, Detailed)</span>
+        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Thumbstick steer · right trigger tuck · left trigger brake · A hop · grip + stick for tricks · X goggles · Y pause · VR graphics tune themselves to your headset (click the left stick to pin Fast, Balanced or Detailed)</span>
         <span><kbd>P</kbd> / <kbd>Esc</kbd></span><span>Pause</span>
         <span><kbd>M</kbd> · <kbd>N</kbd> · <kbd>F</kbd> · <kbd>Q</kbd></span><span>Sound · music · fullscreen · graphics</span>
       </div>
@@ -413,10 +413,12 @@ const QUALITY=[
   {name:'Low',    pr:0.85, shadow:0,    post:false, mblur:false, far:0.45, flakes:350,  lodDist:70},
   {name:'Medium', pr:1.0,  shadow:1024, post:true,  mblur:false, far:0.75, flakes:600, lodDist:95},
   {name:'High',   pr:1.5,  shadow:2048, post:true,  mblur:true,  far:1.0,  flakes:900, lodDist:125},
-  // headset only, never picked from the menu: switch with a click of the left thumbstick inside VR
-  {name:'VR Fast',     pr:1, shadow:0,    post:false, mblur:false, far:0.12, flakes:150, lodDist:0,  vr:true, fb:0.72, ahead:5, snowK:0.1,  gdK:0.12},
-  {name:'VR Balanced', pr:1, shadow:0,    post:false, mblur:false, far:0.3,  flakes:300, lodDist:40, vr:true, fb:0.85, ahead:6, snowK:0.25, gdK:0.3},
-  {name:'VR Detailed', pr:1, shadow:1024, post:false, mblur:false, far:0.5,  flakes:450, lodDist:70, vr:true, fb:1.0,  ahead:7, snowK:0.4,  gdK:0.45},
+  // headset only, never picked from the menu: Auto by default; click the left thumbstick inside VR to pin one
+  // every VR level builds the same full forest (distant trees are cheap pictures), so switching levels never rebuilds the hill
+  // lodDist: full 3D trees · impD: lighter 3D trees, pictures beyond · impF: the same for the forest off to the sides
+  {name:'VR Fast',     pr:1, shadow:0, post:false, mblur:false, far:1, flakes:180, lodDist:0,  impD:60,  impF:0,  vr:true, fb:0.8, ahead:6, snowK:0.12, gdK:0.14},
+  {name:'VR Balanced', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:320, lodDist:40, impD:90,  impF:30, vr:true, fb:0.9, ahead:7, snowK:0.28, gdK:0.32},
+  {name:'VR Detailed', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:480, lodDist:75, impD:115, impF:55, vr:true, fb:1.0, ahead:8, snowK:0.42, gdK:0.48},
 ];
 const IS_HEADSET=/OculusBrowser|Quest|Pico|Wolvic/i.test(navigator.userAgent);   // standalone headsets: start on light graphics even in the flat view
 let qi=IS_HEADSET?0:2; try { const s=localStorage.getItem('sledQuality'); if (s!==null) qi=clamp(+s,0,2); } catch(e){}
@@ -874,7 +876,9 @@ const terrainMat=new T.MeshStandardMaterial({vertexColors:true,map:SNOWTEX.map,n
 const GLINT_U={value:1}, POW_U={value:0}, CRUST_U={value:0}, SUNC_U={value:new T.Color(1,1,1)}, SUNV_U={value:new T.Vector3(0,1,0)};
 terrainMat.onBeforeCompile=sh=>{ // sun glints in the snow crystals, plus fine grain and ripples close to the sled
   sh.uniforms.uDet={value:DETAIL}; sh.uniforms.uGlint=GLINT_U; sh.uniforms.uPow=POW_U; sh.uniforms.uCrust=CRUST_U; sh.uniforms.uSunC=SUNC_U; sh.uniforms.uSunW=SUNV_U; sh.uniforms.uPDet={value:PDETAIL}; sh.uniforms.uTr=TR_U.uTr; sh.uniforms.uTrN=TR_U.uTrN; sh.uniforms.uTrO=TR_U.uTrO;
-  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vSpk;').replace('#include <project_vertex>','#include <project_vertex>\nvSpk=(modelMatrix*vec4(transformed,1.0)).xyz;');
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vSpk;\nattribute float aShade;\nvarying float vSunVis;').replace('#include <project_vertex>','#include <project_vertex>\nvSpk=(modelMatrix*vec4(transformed,1.0)).xyz; vSunVis=1.0-aShade;');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <lights_fragment_begin>',T.ShaderChunk.lights_fragment_begin.replace('getDirectionalDirectLightIrradiance( directionalLight, geometry, directLight );','getDirectionalDirectLightIrradiance( directionalLight, geometry, directLight ); directLight.color*=vSunVis;'))
+    .replace('#include <common>','#include <common>\nvarying float vSunVis;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.rgb*=0.8+0.2*vSunVis;');
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D uDet;\nuniform float uGlint;\nuniform float uPow;\nuniform float uCrust;\nuniform vec3 uSunC;\nuniform vec3 uSunW;\nuniform sampler2D uPDet;\nuniform vec4 uTr[64];\nuniform int uTrN;\nuniform vec3 uTrO;\nvarying vec3 vSpk;\nfloat hsh(vec3 p){ p=fract(p*0.3183099+0.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }\nfloat vn2(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); float a=hsh(vec3(i,1.0)), b=hsh(vec3(i+vec2(1,0),1.0)), c=hsh(vec3(i+vec2(0,1),1.0)), d=hsh(vec3(i+vec2(1,1),1.0)); return mix(mix(a,b,f.x),mix(c,d,f.x),f.y); }\nfloat pillow(vec2 p){ return 0.62*vn2(p*0.38)+0.3*vn2(p*0.95+17.0)+0.08*vn2(p*2.6+5.0); }')
     .replace('#include <clipping_planes_fragment>',`#include <clipping_planes_fragment>
       if (uTrN>1){ vec2 pp=vSpk.xz-uTrO.xz; if (dot(pp,pp)<3600.0){   // cut away the snow along the trench you've plowed, with a broken, crumbly edge
@@ -1182,6 +1186,111 @@ Object.assign(GEO,{cabinBody:CABIN.body,cabinWin:CABIN.win,fence:makeFence(),sno
 Object.assign(GEO,{candy:CANDY,workBody:WORKSHOP.body,workWin:WORKSHOP.win});
 for (const g of Object.values(GEO)) SHARED.add(g); SHARED.add(BANNER_GEO); SHARED.add(POOL_GEO); SHARED.add(XARCH_GEO); SHARED.add(WSIGN_GEO);
 
+/* ---------------- headset detail: cheap look-alikes so VR can show a full forest ----------------
+   1) simpler per-vertex lighting on the big scenery (same colours, a fraction of the cost per pixel)
+   2) distant trees become flat pictures of real trees that always turn to face you (rendered from the actual 3D trees)
+   3) tree, rock and cabin shadows painted into the snow when each stretch of hill is built, plus soft live shadows
+      under the sled, animals and the yeti, instead of real-time shadow maps
+   4) soft glow halos around lamps and windows in place of the computer's bloom */
+const VR_MATS=new Map();
+function lambertOf(src,fresh){
+  const m=new T.MeshLambertMaterial({vertexColors:src.vertexColors,map:src.map,side:src.side,transparent:src.transparent,depthWrite:src.depthWrite,opacity:src.opacity,alphaTest:src.alphaTest,
+    polygonOffset:src.polygonOffset,polygonOffsetFactor:src.polygonOffsetFactor,polygonOffsetUnits:src.polygonOffsetUnits});
+  m.color.copy(src.color); m.alphaToCoverage=src.alphaToCoverage;
+  if (fresh) m.onBeforeCompile=sh=>{ sh.uniforms.uPowC=POW_U;   // the same fresh blanket on anything that faces the sky
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying float vUpF;')
+      .replace('#include <defaultnormal_vertex>','#include <defaultnormal_vertex>\nvUpF=dot(normalize(transformedNormal),normalize((viewMatrix*vec4(0.0,1.0,0.0,0.0)).xyz));');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float uPowC;\nvarying float vUpF;')
+      .replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.rgb=mix(diffuseColor.rgb,vec3(0.95,0.97,1.0),smoothstep(0.12,0.42,vUpF)*uPowC);'); };
+  VR_MATS.set(src,m); return m; }
+for (const [m,f,k] of [[OBJ_MAT,1,0.85],[ROCK_MAT,1],[NEEDLE_MAT,0,0.74],[NEEDLE_MAT_L,0,0.74],[BSNOW_MAT,0,0.9],[BSNOW_MAT_L,0,0.9],[CORE_MAT,0,0.8],[PLAIN_MAT],[ROAD_MAT],[RUT_MAT]]) lambertOf(m,f).color.multiplyScalar(k||1);   // a little darker: no self-shadowing inside the trees
+const vm=m=>(QUALITY[qi].vr&&VR_MATS.get(m))||m;
+
+// distant trees: one atlas of four pictures (two views of the pine, the bare tree, the birch) rendered from the real 3D trees
+// under the current light, so they match the trees close by. Each is a single quad that turns to face you.
+const IMP={rt:null,key:'',U:{uHead:{value:new T.Vector3()}},cells:4};
+IMP.geo=(()=>{ const g=new T.BufferGeometry(); g.setAttribute('position',new T.Float32BufferAttribute([-3.75,-0.5,0, 3.75,-0.5,0, 3.75,14.5,0, -3.75,14.5,0],3));
+  g.setAttribute('uv',new T.Float32BufferAttribute([0,0, 0.25,0, 0.25,1, 0,1],2)); g.setIndex([0,1,2, 0,2,3]); g.computeBoundingSphere(); return g; })();
+SHARED.add(IMP.geo);
+IMP.mat=new T.MeshBasicMaterial({color:new T.Color(2,2,2),alphaTest:0.42,side:T.DoubleSide}); IMP.mat.alphaToCoverage=isGL2;
+IMP.mat.onBeforeCompile=sh=>{ sh.uniforms.uHead=IMP.U.uHead;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform vec3 uHead;')
+    .replace('#include <project_vertex>',`vec3 ic=instanceMatrix[3].xyz; float isx=instanceMatrix[0][0], isy=instanceMatrix[1][1];
+      vec2 tc=uHead.xz-ic.xz; float tl=length(tc); tc=tl>0.001?tc/tl:vec2(0.0,-1.0);
+      vec3 wp=ic+vec3(tc.y,0.0,-tc.x)*transformed.x*isx+vec3(0.0,transformed.y*isy,0.0);
+      vUv.x+=instanceMatrix[0][1];
+      vec4 mvPosition=modelViewMatrix*vec4(wp,1.0); gl_Position=projectionMatrix*mvPosition;`); };
+function bakeImpostors(){
+  const key=[sun.color.getHexString(),sun.intensity.toFixed(2),hemi.color.getHexString(),hemi.groundColor.getHexString(),hemi.intensity.toFixed(2),SUN_DIR.x.toFixed(2),SUN_DIR.y.toFixed(2),SUN_DIR.z.toFixed(2),POW_U.value].join('|');
+  if (IMP.rt && IMP.key===key) return; IMP.key=key;
+  if (!IMP.rt){ IMP.rt=new T.WebGLRenderTarget(2048,1024,{depthBuffer:true}); const t=IMP.rt.texture; t.encoding=T.sRGBEncoding; t.generateMipmaps=true; t.minFilter=T.LinearMipmapLinearFilter; t.magFilter=T.LinearFilter; IMP.mat.map=t; IMP.mat.needsUpdate=true; }
+  const S=new T.Scene(), h=new T.HemisphereLight(hemi.color,hemi.groundColor,hemi.intensity*0.5), d=new T.DirectionalLight(sun.color,sun.intensity*0.5);
+  d.position.copy(SUN_DIR).multiplyScalar(100); S.add(h); S.add(d); S.add(d.target);
+  const cam=new T.OrthographicCamera(-3.75,3.75,14.5,-0.5,1,200); cam.position.set(0,0,-60); cam.lookAt(0,0,0);
+  const mk=(parts,ry)=>{ const g=new T.Group(); for (const [geo,mat] of parts) if (geo.attributes.position.count) g.add(new T.Mesh(geo,VR_MATS.get(mat)||mat)); g.rotation.y=ry; return g; };
+  const pine=[[PINE.wood,OBJ_MAT],[PINE.needles,NEEDLE_MAT],[PINE.snow,BSNOW_MAT]];
+  const trees=[mk(pine,0),mk(pine,1.9),mk([[GEO.bare,OBJ_MAT]],0.7),mk([[GEO.birch,OBJ_MAT]],0.3)];
+  const mats=[...VR_MATS.values()]; for (const m of mats) m.needsUpdate=true;   // compile clean (no tone mapping) for the picture...
+  const oT=renderer.toneMapping, oXR=renderer.xr.enabled, oRT=renderer.getRenderTarget(), oC=renderer.getClearColor(new T.Color()), oA=renderer.getClearAlpha(), oS=renderer.shadowMap.enabled;
+  try { renderer.xr.enabled=false; renderer.toneMapping=T.NoToneMapping; renderer.shadowMap.enabled=false;
+    const rt=IMP.rt; rt.scissorTest=false; rt.viewport.set(0,0,2048,1024); renderer.setRenderTarget(rt); renderer.setClearColor(0x34452f,0); renderer.clear(true,true,false);
+    trees.forEach((t,i)=>{ S.add(t); rt.viewport.set(i*512,0,512,1024); rt.scissor.set(i*512,0,512,1024); rt.scissorTest=true; renderer.setRenderTarget(rt); renderer.render(S,cam); S.remove(t); });
+    rt.scissorTest=false; rt.viewport.set(0,0,2048,1024); }
+  finally { renderer.toneMapping=oT; renderer.shadowMap.enabled=oS; renderer.setRenderTarget(oRT); renderer.setClearColor(oC,oA); renderer.xr.enabled=oXR; for (const m of mats) m.needsUpdate=true; }   // ...then back to normal
+}
+// one instanced quad set for a list of trees; the type (which picture) rides along in the instance matrix
+const _im=new T.Matrix4();
+function impostors(list,group,bucket,r){ if (!list.length) return; const m=new T.InstancedMesh(IMP.geo,IMP.mat,list.length); m.frustumCulled=false;
+  list.forEach((o,i)=>{ const e=_im.elements; e.fill(0); const s=o.s, sy=s*(o.sy||1);
+    e[0]=s; e[1]=o.type==='bare'?0.5:o.type==='birch'?0.75:(r()<0.5?0:0.25); e[5]=sy; e[10]=s; e[15]=1; e[12]=o.x; e[13]=height(o.x,o.z)-0.25; e[14]=o.z; m.setMatrixAt(i,_im); });
+  m.instanceMatrix.needsUpdate=true; group.add(m); bucket.push(m); }
+
+// shadows painted into the snow: each tree's shadow is a cone stretched away from the sun
+function shadeInfo(){ const d=SUN_DIR, hl=Math.max(0.05,Math.hypot(d.x,d.z)), Lf=Math.min(2.3,hl/Math.max(0.06,d.y));
+  const sp=sun.intensity*Math.max(0,d.y*0.958+d.z*0.287), hp=hemi.intensity*(hemi.color.r*0.3+hemi.color.g*0.59+hemi.color.b*0.11);   // sun vs sky light on a typical downhill slope
+  return {dx:-d.x/hl, dz:-d.z/hl, Lf, S:clamp(sp/(sp+hp+0.02),0,0.84)}; }
+function shadowCasters(L){ const out=[];
+  for (const o of L.pineN.concat(L.pineF)) out.push([o.x,o.z,11*o.s*(o.sy||1),2.4*o.s,1]);
+  for (const o of L.bareN.concat(L.bareF)) out.push([o.x,o.z,8.5*o.s*(o.sy||1),2.4*o.s,0.3]);
+  for (const o of L.birchN.concat(L.birchF)) out.push([o.x,o.z,10*o.s*(o.sy||1),1.6*o.s,0.26]);
+  for (const o of L.rock) out.push([o.x,o.z,1.1*o.s,1.3*o.s,0.9]);
+  for (const o of L.cabin.concat(L.workshop)) out.push([o.x,o.z,4.6*(o.s||1),3.4*(o.s||1),0.85]);
+  for (const o of L.snowman) out.push([o.x,o.z,2.0,0.5,0.7]);
+  return out; }
+function castShade(T_,casters,I){ const {sh,pos,rows,cols,z0}=T_, {dx,dz,Lf}=I, ks=[0,0.18,0.36,0.6];
+  for (const c of casters){ const tx=c[0], tz=c[1], Ht=c[2], Rb=c[3], den=c[4], len=Ht*Lf, ax=tx+dx*len, az=tz+dz*len;
+    const zmin=Math.min(tz,az)-Rb, zmax=Math.max(tz,az)+Rb, xmin=Math.min(tx,ax)-Rb, xmax=Math.max(tx,ax)+Rb;
+    const r0=Math.max(0,Math.floor((zmin-z0)/ROW)), r1=Math.min(rows-1,Math.ceil((zmax-z0)/ROW)); if (r0>r1) continue;
+    for (let r=r0;r<=r1;r++){ const base=r*cols; let lo=0, hi=cols-1; while (lo<hi){ const mm=(lo+hi)>>1; if (pos[(base+mm)*3]<xmin) lo=mm+1; else hi=mm; }
+      for (let cc=lo;cc<cols;cc++){ const i=base+cc, x=pos[i*3]; if (x>xmax) break; const ox=x-tx, oz=pos[i*3+2]-tz, a=ox*dx+oz*dz; if (a<-Rb) continue; const b2=(ox*dz-oz*dx)**2;
+        let m=0; const kc=clamp((a/Math.max(0.01,Lf*Ht)-0.11)/0.89,0,1);
+        for (let s=0;s<5;s++){ const k=s<4?ks[s]:kc, y=Ht*(0.11+0.89*k), R=Rb*(1-k)+0.12, aa=a-y*Lf, dd=Math.sqrt(aa*aa+b2); m=Math.max(m,1-dd/R); }
+        if (m>0){ const v=Math.min(1,m/0.2)*den; if (v>sh[i]) sh[i]=v; } } } } }
+function applyShade(T_){ T_.attr.needsUpdate=true; }   // the terrain shader takes the sun away where the shade is (diffuse and the glare off the snow alike)
+
+// soft live shadows (multiplied onto the snow) and glow halos (added light)
+const BLOB_MAT=new T.ShaderMaterial({transparent:true,depthWrite:false,blending:T.MultiplyBlending,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-8,
+  vertexShader:`varying vec2 vU; varying float vK; void main(){ vU=uv; vK=instanceColor.r; gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.0); }`,
+  fragmentShader:`varying vec2 vU; varying float vK; void main(){ float d=length(vU-0.5)*2.0; float a=(1.0-smoothstep(0.2,1.0,d))*vK; gl_FragColor=vec4(vec3(1.0)-a*vec3(0.62,0.58,0.42),1.0); }`});
+const BLOBS=new T.InstancedMesh(new T.PlaneGeometry(1,1).rotateX(-Math.PI/2),BLOB_MAT,24); BLOBS.frustumCulled=false; BLOBS.count=0; BLOBS.renderOrder=3; BLOBS.visible=false; scene.add(BLOBS);
+BLOBS.setColorAt(0,new T.Color(0,0,0));
+const HALO_U={uOp:{value:0},uFogD:{value:0.004}};
+const HALOQ_MAT=new T.ShaderMaterial({uniforms:HALO_U,transparent:true,depthWrite:false,blending:T.AdditiveBlending,
+  vertexShader:`uniform float uFogD; varying vec2 vU; varying vec3 vC; varying float vF; void main(){ vU=uv; vC=instanceColor; vec3 c=instanceMatrix[3].xyz; float s=instanceMatrix[0][0];
+    vec4 mv=modelViewMatrix*vec4(c,1.0); float l=length(mv.xyz); mv.xyz*=max(0.0,1.0-0.6/max(l,0.7)); mv.xy+=position.xy*s; vF=exp(-uFogD*uFogD*l*l); gl_Position=projectionMatrix*mv; }`,
+  fragmentShader:`uniform float uOp; varying vec2 vU; varying vec3 vC; varying float vF; void main(){ float d=length(vU-0.5)*2.0; float a=pow(max(0.0,1.0-d),1.9); gl_FragColor=vec4(vC*a*uOp*vF*1.5,1.0); }`});
+const HALO_GEO=new T.PlaneGeometry(1,1); SHARED.add(HALO_GEO);
+function boxCenters(geo){ const p=geo.attributes.position, out=[]; if (p.count%36) return out; for (let i=0;i<p.count;i+=36){ let x=0,y=0,z=0; for (let j=0;j<36;j++){ x+=p.getX(i+j); y+=p.getY(i+j); z+=p.getZ(i+j); } out.push(new T.Vector3(x/36,y/36,z/36)); } return out; }
+const WIN_C={cabin:boxCenters(CABIN.win), work:boxCenters(WORKSHOP.win)}, WARM=new T.Color(1.0,0.62,0.3);
+function vrWarm(){ // compile every headset material up front, so nothing stalls the first time a village or a shadow shows up mid-run
+  try { const g=new T.Group(), geo=new T.BoxGeometry(0.01,0.01,0.01); geo.setAttribute('color',new T.Float32BufferAttribute(new Array(geo.attributes.position.count*3).fill(1),3));
+    const add=(m,gm)=>{ const im=new T.InstancedMesh(gm||geo,m,1); im.setMatrixAt(0,_im.identity()); im.setColorAt(0,WARM); im.frustumCulled=false; g.add(im); };
+    for (const m of VR_MATS.values()) add(m); add(IMP.mat,IMP.geo); add(HALOQ_MAT,HALO_GEO); g.position.copy(camera.position); scene.add(g); const dv=DRESS.g?DRESS.g.visible:false; if (DRESS.g) DRESS.g.visible=false; const hid=[]; scene.traverse(o=>{ if (!o.visible && !o.isLight && o!==DRESS.g){ hid.push(o); o.visible=true; } });   // hidden things too (animals, the yeti...), with the riding lights only
+    try { renderer.compile(scene,camera); } finally { for (const o of hid) o.visible=false; scene.remove(g); if (DRESS.g) DRESS.g.visible=dv; } geo.dispose(); g.traverse(o=>{ if (o.isInstancedMesh) o.dispose&&o.dispose(); }); } catch(e){} }
+function halos(list,group){ if (!list.length) return; const m=new T.InstancedMesh(HALO_GEO,HALOQ_MAT,list.length); m.frustumCulled=false; m.renderOrder=4;
+  list.forEach((h,i)=>{ const e=_im.elements; e.fill(0); e[0]=e[5]=e[10]=h[1]; e[15]=1; e[12]=h[0].x; e[13]=h[0].y; e[14]=h[0].z; m.setMatrixAt(i,_im); m.setColorAt(i,h[2]||WARM); });
+  m.instanceMatrix.needsUpdate=true; m.instanceColor.needsUpdate=true; group.add(m); }
+
 /* ---------------- terrain chunks ---------------- */
 const CH=50, ROW=0.75;
 const UCOLS=(function(){ const a=[]; for(let u=-90;u<-45;u+=4) a.push(u); for(let u=-45;u<-20;u+=2) a.push(u); for(let u=-20;u<20;u+=1) a.push(u); for(let u=20;u<45;u+=2) a.push(u); for(let u=45;u<=90;u+=4) a.push(u); return a; })();
@@ -1207,7 +1316,8 @@ let pz=6;
 function buildChunk(k){ const g=buildChunkGen(k); while(!g.next().done); }
 function* buildChunkGen(k){   // yields between stages so a new stretch of hill is built over several frames
   const z0=k*CH; extendCourse(z0+CH+400);
-  const q=QUALITY[qi], group=new T.Group(), det=[], lite=[];
+  const q=QUALITY[qi], group=new T.Group(), det=[], lite=[], VRB=!!q.vr, near=[], imp=[], fLite=[], fImp=[];
+  if (VRB) bakeImpostors();
   // 1) forest placement
   const rng=mulberry(k*7919+3), L={pineN:[],pineF:[],bareN:[],bareF:[],birchN:[],birchF:[],rock:[],log:[],flag:[],cabin:[],fence:[],snowman:[],shanty:[],lamp:[],sign:[],banner:[],icecrack:[],xarch:[],workshop:[]}, occ=[];
   let zrow=0;
@@ -1245,7 +1355,10 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
       col[i*3]=(0.86+v+sh)*ao; col[i*3+1]=(0.89+v+sh)*(0.15+0.85*ao); col[i*3+2]=(0.95+v*0.6)*(0.45+0.55*ao);
       uv[i*2]=x/7; uv[i*2+1]=z/7; ymin=Math.min(ymin,y); ymax=Math.max(ymax,y); xmin=Math.min(xmin,x); xmax=Math.max(xmax,x); } }
   const idx=[]; for(let r=0;r<rows-1;r++) for(let c=0;c<cols-1;c++){ const a=r*cols+c,b=a+1,d=a+cols,e=d+1; idx.push(a,d,b, b,d,e); }
-  const g=new T.BufferGeometry(); g.setAttribute('position',new T.BufferAttribute(pos,3)); g.setAttribute('normal',new T.BufferAttribute(nor,3)); g.setAttribute('color',new T.BufferAttribute(col,3)); g.setAttribute('uv',new T.BufferAttribute(uv,2)); g.setIndex(idx); g.computeBoundingSphere();
+  const g=new T.BufferGeometry(); g.setAttribute('position',new T.BufferAttribute(pos,3)); g.setAttribute('normal',new T.BufferAttribute(nor,3)); g.setAttribute('color',new T.BufferAttribute(col,3)); g.setAttribute('aShade',new T.BufferAttribute(new Float32Array(rows*cols),1)); g.setAttribute('uv',new T.BufferAttribute(uv,2)); g.setIndex(idx); g.computeBoundingSphere();
+  let terrT=null; if (VRB){   // paint tree, rock and cabin shadows into the snow (and into the stretch next door where they spill over)
+    const I=shadeInfo(), cs=shadowCasters(L); terrT={sh:g.attributes.aShade.array,pos,rows,cols,z0,attr:g.attributes.aShade,cs};
+    if (I.S>0.02){ castShade(terrT,cs,I); for (const nk of [k-1,k+1]){ const ng=chunks.get(nk), nt=ng&&ng.userData.terrT; if (nt){ castShade(terrT,nt.cs,I); castShade(nt,cs,I); applyShade(nt); } } } }
   const terr=new T.Mesh(g,terrainMat); terr.receiveShadow=true; group.add(terr);
   yield;
   // 3) old sled ruts from earlier riders
@@ -1258,7 +1371,7 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
           if (prev&&ok&&prev.ok){ for (const V of [[prev.A,0,prev.v],[A,0,z/2],[prev.B,1,prev.v],[prev.B,1,prev.v],[A,0,z/2],[B,1,z/2]]){ rp.push(...V[0]); ru.push(V[1],V[2]); rn.push(0,1,0); } }
           prev={A,B,ok,v:z/2}; } } }
     if (rp.length){ const rg=new T.BufferGeometry(); rg.setAttribute('position',new T.Float32BufferAttribute(rp,3)); rg.setAttribute('uv',new T.Float32BufferAttribute(ru,2)); rg.setAttribute('normal',new T.Float32BufferAttribute(rn,3));
-      const rm=new T.Mesh(rg,RUT_MAT); rm.receiveShadow=true; rm.renderOrder=1; group.add(rm); } }
+      const rm=new T.Mesh(rg,vm(RUT_MAT)); rm.receiveShadow=true; rm.renderOrder=1; group.add(rm); } }
   // 4) ice and creeks
   for (const f of ICE){ if (f.z1<z0||f.z0>z0+CH) continue; const a=Math.max(z0,f.z0), bz=Math.min(z0+CH,f.z1), W=f.w||9, st=f.lake?2:1.5; const iu=[]; for(let u=-W;u<=W+0.01;u+=st) iu.push(u);
     const ir=Math.max(2,Math.round((bz-a)/ROW)+1), ip=[], ii=[], iv=[];
@@ -1272,10 +1385,10 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
     for (const t of [-f.w,0,f.w]) for (const u of cols2){ const z=f.z+t, x=cx(f.z)+u; rp.push(x,height(x,z)+0.03,z); ru.push(u/8,(t+f.w)/(2*f.w)); }
     for (let r=0;r<2;r++) for (let c=0;c<cols2.length-1;c++){ const qq=r*cols2.length+c; ri.push(qq,qq+cols2.length,qq+1, qq+1,qq+cols2.length,qq+cols2.length+1); }
     const rg=new T.BufferGeometry(); rg.setAttribute('position',new T.Float32BufferAttribute(rp,3)); rg.setAttribute('uv',new T.Float32BufferAttribute(ru,2)); rg.setIndex(ri); rg.computeVertexNormals();
-    const rm=new T.Mesh(rg,ROAD_MAT); rm.receiveShadow=true; rm.renderOrder=1; group.add(rm); }
+    const rm=new T.Mesh(rg,vm(ROAD_MAT)); rm.receiveShadow=true; rm.renderOrder=1; group.add(rm); }
   yield;
   // 5) instanced objects
-  const inst=(list,geo,mat,cast,depthMat,bucket,place)=>{ if(!list.length||!geo.attributes.position||!geo.attributes.position.count) return; const m=new T.InstancedMesh(geo,mat,list.length); m.frustumCulled=false; m.castShadow=cast; m.receiveShadow=true;
+  const inst=(list,geo,mat,cast,depthMat,bucket,place)=>{ if(!list.length||!geo.attributes.position||!geo.attributes.position.count) return; const m=new T.InstancedMesh(geo,vm(mat),list.length); m.frustumCulled=false; m.castShadow=cast; m.receiveShadow=true;
     if (depthMat) m.customDepthMaterial=depthMat;
     list.forEach((o,i)=>{ place(o); tmpM.compose(tmpV,tmpQ,tmpS); m.setMatrixAt(i,tmpM); }); m.instanceMatrix.needsUpdate=true; group.add(m); if(bucket) bucket.push(m); };
   const treeP=o=>{ tmpQ.setFromAxisAngle(UP,o.ry); tmpS.set(o.s,o.s*(o.sy||1),o.s); tmpV.set(o.x,height(o.x,o.z)-0.25,o.z); };
@@ -1285,12 +1398,13 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   yield;
   if (themeNow==='christmas' && L.pineN.length){ const dr=mulberry(k*977+5), dec=L.pineN.filter(o=>{ const au=Math.abs(o.x-cx(o.z)); return au<24 && dr()<(zoneAt(o.z)==='village'?0.7:au<14?0.22:0.12); });
     if (!dec.length){ const near=L.pineN.filter(o=>Math.abs(o.x-cx(o.z))<30); if (near.length) dec.push(near[(dr()*near.length)|0]); } decorateTrees(dec,group,dr); }
-  inst(L.pineN,PINE.core,CORE_MAT,sh,null,det,treeP); inst(L.pineN,PINE_L.core,CORE_MAT,sh,null,lite,treeP); inst(L.pineF,PINE_L.core,CORE_MAT,false,null,(qi===1||qi===2)?lite:null,treeP);
+  inst(L.pineN,PINE.core,CORE_MAT,sh,null,det,treeP); inst(L.pineN,PINE_L.core,CORE_MAT,sh,null,lite,treeP); inst(L.pineF,PINE_L.core,CORE_MAT,false,null,VRB?fLite:(qi===1||qi===2)?lite:null,treeP);
   if (qi===1||qi===2){ inst(L.pineF,PINE.wood,OBJ_MAT,false,null,det,treeP); inst(L.pineF,PINE.needles,NEEDLE_MAT,false,null,det,treeP); inst(L.pineF,PINE.snow,BSNOW_MAT,false,null,det,treeP); inst(L.pineF,PINE.core,CORE_MAT,false,null,det,treeP); }   // full-detail pines off to the sides too (Low graphics and VR keep the light ones)
-  const fL=(qi===1||qi===2)?lite:null; inst(L.pineF,PINE_L.wood,OBJ_MAT,false,null,fL,treeP); inst(L.pineF,PINE_L.needles,NEEDLE_MAT_L,false,null,fL,treeP); inst(L.pineF,PINE_L.snow,BSNOW_MAT_L,false,null,fL,treeP);
+  const fL=VRB?fLite:(qi===1||qi===2)?lite:null; inst(L.pineF,PINE_L.wood,OBJ_MAT,false,null,fL,treeP); inst(L.pineF,PINE_L.needles,NEEDLE_MAT_L,false,null,fL,treeP); inst(L.pineF,PINE_L.snow,BSNOW_MAT_L,false,null,fL,treeP);
   yield;
-  inst(L.bareN,GEO.bare,OBJ_MAT,sh,null,null,treeP); inst(L.bareF,GEO.bare,OBJ_MAT,false,null,null,treeP);
-  inst(L.birchN,GEO.birch,OBJ_MAT,sh,null,null,treeP); inst(L.birchF,GEO.birch,OBJ_MAT,false,null,null,treeP);
+  inst(L.bareN,GEO.bare,OBJ_MAT,sh,null,VRB?near:null,treeP); inst(L.bareF,GEO.bare,OBJ_MAT,false,null,VRB?fLite:null,treeP);
+  inst(L.birchN,GEO.birch,OBJ_MAT,sh,null,VRB?near:null,treeP); inst(L.birchF,GEO.birch,OBJ_MAT,false,null,VRB?fLite:null,treeP);
+  if (VRB){ const ir=mulberry(k*31+7); impostors(L.pineN.concat(L.bareN,L.birchN),group,imp,ir); impostors(L.pineF.concat(L.bareF,L.birchF),group,fImp,ir); }
   inst(L.rock,GEO.rock,ROCK_MAT,sh,null,null,o=>{ tmpQ.setFromAxisAngle(UP,o.ry); tmpS.set(o.s*1.1,o.s,o.s*0.95); tmpV.set(o.x,height(o.x,o.z)+0.12*o.s,o.z); });
   inst(L.log,GEO.log,OBJ_MAT,sh,null,null,o=>{ tmpQ.setFromAxisAngle(UP,pathHeading(o.z)+o.ry); tmpS.set(o.len,1,1); tmpV.set(o.x,gH(o.x,o.z)+0.2,o.z); });
   inst(L.flag,GEO.flag,OBJ_MAT,sh,null,null,o=>{ tmpQ.setFromAxisAngle(UP,0.6); tmpS.set(1,1,1); tmpV.set(o.x,height(o.x,o.z),o.z); });
@@ -1314,6 +1428,10 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   const candyL=L.lamp.filter(o=>o.candy); L.lamp=L.lamp.filter(o=>!o.candy); inst(candyL,GEO.candy,PLAIN_MAT,sh,null,null,flatP(-0.05,false));
   inst(L.lamp,GEO.lampBody,PLAIN_MAT,sh,null,null,flatP(-0.05,false)); inst(L.lamp,GEO.lampBulb,GLOW_MAT,false,null,null,flatP(-0.05,false));
   inst(L.lamp,POOL_GEO,POOL_MAT,false,null,null,o=>{ const lx=o.x+Math.cos(o.ry||0)*0.85, lz=o.z-Math.sin(o.ry||0)*0.85; normalAt(lx,lz,tmpV); tmpQ.setFromUnitVectors(UP,tmpV); tmpS.set(1,1,1); tmpV.set(lx,height(lx,lz)+0.06,lz); });
+  if (VRB){ const hl=[], M4=new T.Matrix4();
+    for (const o of L.lamp){ flatP(-0.05,false)(o); M4.compose(tmpV,tmpQ,tmpS); hl.push([new T.Vector3(0.85,3.36,0).applyMatrix4(M4),2.6]); }
+    for (const [list,wc] of [[L.cabin,WIN_C.cabin],[L.workshop,WIN_C.work]]) for (const o of list){ lowP(o); M4.compose(tmpV,tmpQ,tmpS); for (const c of wc) hl.push([c.clone().applyMatrix4(M4),2.2*(o.s||1)]); }
+    halos(hl,group); }
   inst(L.sign,GEO.sign,PLAIN_MAT,sh,null,null,o=>{ tmpQ.setFromAxisAngle(UP,pathHeading(o.z)+Math.PI); tmpS.set(1,1,1); tmpV.set(o.x,height(o.x,o.z)-0.05,o.z); });
   const _cq=new T.Quaternion(), _cn2=new T.Vector3();
   for (const o of L.icecrack){ const m=new T.Mesh(ICECRACK_GEO,ICECRACK_MAT); normalAt(o.x,o.z,_cn2); m.quaternion.setFromUnitVectors(UP,_cn2).multiply(_cq.setFromAxisAngle(UP,o.ang+(o.flip?Math.PI:0)));
@@ -1321,7 +1439,7 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   for (const o of L.banner){ const hd=pathHeading(o.z), y0=Math.min(height(o.x-Math.cos(hd)*7.4,o.z+Math.sin(hd)*7.4),height(o.x+Math.cos(hd)*7.4,o.z-Math.sin(hd)*7.4));
     const posts=new T.Mesh(GEO.bannerPost,OBJ_MAT); posts.position.set(o.x,y0-0.1,o.z); posts.rotation.y=hd; posts.castShadow=sh; group.add(posts);
     const ban=new T.Mesh(BANNER_GEO,BANNER_MAT); ban.position.set(o.x,y0+4.3,o.z); ban.rotation.y=hd+Math.PI; ban.castShadow=sh; group.add(ban); }
-  group.userData={box:new T.Box3(new T.Vector3(xmin,ymin-3,z0-4),new T.Vector3(xmax,ymax+18,z0+CH+4)), det, lite, zc:z0+CH/2};
+  group.userData={box:new T.Box3(new T.Vector3(xmin,ymin-3,z0-4),new T.Vector3(xmax,ymax+18,z0+CH+4)), det, lite, near, imp, fLite, fImp, terrT, zc:z0+CH/2};
   scene.add(group); chunks.set(k,group);
 }
 function disposeChunk(k,keepPath){ const g=chunks.get(k); if(!g) return; scene.remove(g);
@@ -2515,7 +2633,7 @@ function applyConditions(id){ condNow=CONDS[id]?id:'golden'; const B=CONDS[condN
   SUN_DIR.set(C.sun[0],C.sun[1],C.sun[2]).normalize(); U.uSun.value.copy(SUN_DIR);
   sun.color.set(mixHex(C.sunCol,'#f2f4f8',sk*0.8)); sun.intensity=C.sunI*L.sunK; SUNV_U.value.copy(SUN_DIR); SUNC_U.value.copy(sun.color).multiplyScalar(sun.intensity*0.5); hemi.color.set(mixHex(C.hemiS,haze,k*0.8)); hemi.groundColor.set(mixHex(C.hemiG,storm,sk*0.85)); hemi.intensity=C.hemiI*(1+k*0.5);
   scene.fog.color.set(fog); scene.fog.density=C.fogD*fogMul; U.uHor.value.set(fog); U.uTop.value.set(mixHex(C.top,fog,k*0.95)); U.uMid.value.set(mixHex(C.mid,fog,k*0.95)); U.uSunCol.value.set(mixHex(C.skySun,storm,sk));
-  U.uGlow.value=C.glow*L.sunK; U.uDisc.value=C.disc*clamp((L.sunK-0.5)*2,0,1); U.uStars.value=C.stars*clamp((L.sunK-0.75)*4,0,1); renderer.toneMappingExposure=C.exp*(1-k*0.2);
+  U.uGlow.value=C.glow*L.sunK*(QUALITY[qi].vr?1.5:1); U.uDisc.value=C.disc*clamp((L.sunK-0.5)*2,0,1); U.uStars.value=C.stars*clamp((L.sunK-0.75)*4,0,1); renderer.toneMappingExposure=C.exp*(1-k*0.2)*(QUALITY[qi].vr?1.1:1);   // a touch brighter in the headset, which has no bloom
   for (const m of mountains.children) m.material.color.set(mixHex(C.mtn,fog,k)); mountains.visible=L.sunK>0.45;
   { const ga=(C.amb[0]+C.amb[1]+C.amb[2])/3; sprayMat.uniforms.uAmb.value.set(lerp(C.amb[0],ga*0.96,sk),lerp(C.amb[1],ga,sk),lerp(C.amb[2],ga*1.06,sk)); } sprayMat.uniforms.uSunCol.value.set(C.sc[0]*L.sunK,C.sc[1]*L.sunK,C.sc[2]*L.sunK);
   // flake colour follows the light: bright in daylight, dim blue at night (your headlamp lights the ones right in front of you)
@@ -3620,7 +3738,7 @@ function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)
   for (const src of ses.inputSources){ const gp=src.gamepad; if (!gp) continue; const L=src.handedness==='left', ax=gp.axes[2]||0, ay=gp.axes[3]||0, b=i=>!!gp.buttons[i]?.pressed;
     if (Math.abs(ax)>0.18) padSteer=ax; if (Math.abs(ay)>0.25) padPitch=ay;
     if (b(1)) padTrick=true;
-    if (L){ if (pressed('LS',b(3))) setVRLevel(qi>=5?3:qi+1,'click the left stick to change'); if (b(0)) padBrake=true; if (pressed('X',b(4))) setGoggles(!SETTINGS.goggles); if (pressed('Y',b(5))) togglePause(); }
+    if (L){ if (pressed('LS',b(3))) cycleVRLevel(); if (b(0)) padBrake=true; if (pressed('X',b(4))) setGoggles(!SETTINGS.goggles); if (pressed('Y',b(5))) togglePause(); }
     else { if (b(0)) padTuck=true; const a=pressed('A',b(4)); if (a){ if (state==='play') hopReq=0.15; else if (state==='over') startGame(); } if (pressed('B',b(5)) && (state==='over'||state==='pause')) ses.end(); } } }
 function xrPre(dt){ // the sled carries the dolly; the headset adds your own head movement on top
   XR.E.copy(camera.position); XR.Q.copy(camera.quaternion);
@@ -3634,34 +3752,67 @@ function xrPre(dt){ // the sled carries the dolly; the headset adds your own hea
   const sp=speedNow(); XR.vig.visible=true; XR.vig.material.opacity=state==='play'?clamp((sp-14)/30,0,0.75)+(onGround?0:0.15):state==='crash'?0.6:0;
   camera.position.set(0,0,0); camera.quaternion.identity(); camera.updateMatrixWorld(true); }
 function xrPost(){ camera.position.copy(XR.E); camera.quaternion.copy(XR.Q); }
-function vrLevel(){ let v=4; try { const s=localStorage.getItem('sledVRq'); if (s!==null) v=clamp(+s,3,5); } catch(e){} return v; }
-function setVRLevel(v,why){ v=clamp(v,3,5); if (v===qi) return; qi=v; try{ localStorage.setItem('sledVRq',String(v)); }catch(e){}
-  applyQuality(true); XR.guardT=-6; XR.guardN=0;   // the switch itself causes a hitch, so give it a few seconds before judging
-  try { const ses=XR.session, gl=renderer.getContext(); if (ses && typeof XRWebGLLayer!=='undefined'){ const layer=new XRWebGLLayer(ses,gl,{antialias:true,alpha:false,depth:true,framebufferScaleFactor:QUALITY[v].fb}); try{ layer.fixedFoveation=1; }catch(e){} ses.updateRenderState({baseLayer:layer}); } } catch(e){}
-  xrMsg(QUALITY[v].name+(why?' · '+why:'')); }
-// if the headset can't keep up (frames arriving slower than its refresh rate), step down a level on its own
-function xrGuard(dt){ if (state!=='play'){ XR.guardT=Math.min(XR.guardT,0); XR.guardN=0; return; } XR.guardT+=dt; XR.guardN++;
-  if (XR.guardT>=4){ const fps=XR.guardN/XR.guardT, target=(XR.session&&XR.session.frameRate)||72; XR.guardT=0; XR.guardN=0; if (fps<target*0.86 && qi>3) setVRLevel(qi-1,'stepped down to keep it smooth'); } }
+// VR detail runs itself: the render sharpness slides up and down every second to hold the headset's frame rate, and the
+// level (how far full 3D trees reach, how much snow) steps up when there's room and down when there isn't. Click the left
+// stick to pin a level instead (Auto → Fast → Balanced → Detailed → Auto).
+const VRA={auto:true,vs:0.8,min:0.55,ceil:1,vsOK:false,fb:1,win:0,miss:0,n:0,good:0,up:0,cool:0};
+function vrLevel(){ let v=4; VRA.auto=true; try { const s=localStorage.getItem('sledVRq'); if (s!==null && s!=='auto'){ v=clamp(+s,3,5); VRA.auto=false; } } catch(e){} return v; }
+function vrTier(v){ v=clamp(v,3,5); if (v===qi) return false; qi=v; flakeGeo.setDrawRange(0,flakeCount()); gdGeo.setDrawRange(0,groundCount()); return true; }   // no rebuild needed between VR levels
+function setVRLevel(v,why){ vrTier(v); try{ localStorage.setItem('sledVRq',VRA.auto?'auto':String(qi)); }catch(e){} xrMsg((VRA.auto?'Auto detail · ':'')+QUALITY[qi].name+(why?' · '+why:'')); }
+function cycleVRLevel(){ if (VRA.auto){ VRA.auto=false; setVRLevel(3); } else if (qi<5) setVRLevel(qi+1); else { VRA.auto=true; VRA.good=0; VRA.up=0; setVRLevel(qi,'adjusts itself'); } }
+function vrVis(){ const q=QUALITY[qi], ld=q.lodDist||0, iD=q.impD||1e9, iF=q.impF||0;   // which version of each tree to draw, by distance
+  for (const g of chunks.values()){ g.visible=true; const u=g.userData, dz=Math.abs(u.zc-pz), a=dz<ld, b=dz<iD, f=dz<iF;
+    for (const m of u.det) m.visible=a; for (const m of u.lite) m.visible=!a&&b; for (const m of u.near) m.visible=b; for (const m of u.imp) m.visible=!b; for (const m of u.fLite) m.visible=f; for (const m of u.fImp) m.visible=!f; } }
+function xrViewScale(xf){ if (!xf||!XR.session) return; let pose=null; try { pose=xf.getViewerPose(renderer.xr.getReferenceSpace()); } catch(e){} if (!pose) return;
+  for (const v of pose.views) if (typeof v.requestViewportScale==='function'){ VRA.vsOK=true; v.requestViewportScale(VRA.vs); } }
+function xrAdapt(ms){ const A=VRA; if (state!=='play'){ A.win=A.miss=A.n=0; A.cool=Math.min(A.cool,-2); return; }   // judge only while riding, a couple of seconds after any pause
+  if (A.cool<0){ A.cool+=Math.min(ms,100)/1000; A.win=A.miss=A.n=0; return; }
+  const tgt=1000/((XR.session&&XR.session.frameRate)||72); A.n++; A.win+=ms; if (ms>tgt*1.35) A.miss++;
+  if (A.win<1000) return;
+  const mr=A.miss/Math.max(1,A.n); A.win=A.miss=A.n=0;
+  if (mr>0.05){ A.good=0; A.up=0;   // dropping frames: soften the image first, then lighten the level
+    if (A.vsOK && A.vs>A.min+0.001){ A.ceil=Math.max(A.min,A.vs-0.03); A.vs=Math.max(A.min,A.vs-(mr>0.25?0.12:0.05)); }
+    else if (A.auto && qi>3){ vrTier(qi-1); A.vs=Math.min(1,A.vs+0.1); A.ceil=1; A.cool=-3; xrMsg('Auto detail · '+QUALITY[qi].name); } }
+  else { A.good++; A.up++;
+    if (A.vsOK && A.good>=2 && A.vs<A.ceil-0.001){ A.vs=Math.min(A.ceil,A.vs+0.025); A.good=0; }
+    if (A.up%20===0) A.ceil=Math.min(1,A.ceil+0.03);   // try a little higher again now and then
+    if (A.auto && qi<5 && A.up>=12 && (!A.vsOK || A.vs>=0.97)){ vrTier(qi+1); A.vs=Math.max(A.min,A.vs-0.12); A.up=0; A.cool=-3; xrMsg('Auto detail · '+QUALITY[qi].name); } } }
+// live soft shadows under the sled, the animals, the yeti and the reindeer team
+const _bq=new T.Quaternion(), _bq2=new T.Quaternion(), _bn=new T.Vector3(), _bs=new T.Vector3(), _bp=new T.Vector3(), _bc=new T.Color();
+function updateBlobs(){ const I=shadeInfo(); let n=0; if (I.S<0.03){ BLOBS.count=0; return; }
+  const put=(x,y0,z,w,l,yaw,hAbove,k)=>{ if (n>=24) return; const off=Math.min(5,hAbove*I.Lf), sx=x+I.dx*off, sz=z+I.dz*off, gy=gH(sx,sz), f=clamp(1-hAbove/6,0,1)*k; if (f<0.02) return;
+    normalAtV(sx,sz,_bn); _bq.setFromUnitVectors(UP,_bn).multiply(_bq2.setFromAxisAngle(UP,yaw)); const sc=1+hAbove*0.12;
+    _bp.set(sx,gy+0.04,sz); _bs.set(w*sc,1,l*sc*(1+I.Lf*0.18)); tmpM.compose(_bp,_bq,_bs); BLOBS.setMatrixAt(n,tmpM); BLOBS.setColorAt(n,_bc.setRGB(f*I.S*1.5,0,0)); n++; };
+  if (state!=='crash') put(px,0,pz,1.25,2.1,heading,Math.max(0,py-gH(px,pz)),1);
+  for (const c of critters) if (c.active && c.g.visible){ const p=c.g.position; put(p.x,0,p.z,c.kind==='elf'?0.7:c.kind==='moose'?1.6:1.2,c.kind==='elf'?0.7:2.4,c.g.rotation.y,0,0.9); }
+  if (yeti.active && yeti.g.visible){ const p=yeti.g.position; put(p.x,0,p.z,1.8,1.8,0,0,1); }
+  if (team.on && team.list) for (const c of team.list) if (c.g.visible){ const p=c.g.getWorldPosition(_bp.clone()); put(p.x,0,p.z,1.1,2.2,heading,Math.max(0,p.y-gH(p.x,p.z)),0.9); }
+  BLOBS.count=n; BLOBS.instanceMatrix.needsUpdate=true; if (BLOBS.instanceColor) BLOBS.instanceColor.needsUpdate=true; }
 async function enterVR(){
   if (!navigator.xr){ toast('VR needs a headset browser, like the Meta Quest Browser'); return; }
   try {
     const ses=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']}); XR.session=ses; XR.on=true;
-    XR.prevQi=qi; qi=vrLevel(); applyQuality(true);   // the headset draws everything twice at high resolution, so it gets its own graphics levels
-    renderer.xr.setFramebufferScaleFactor(QUALITY[qi].fb);   // render resolution for this level
+    XR.prevQi=qi; qi=vrLevel(); applyConditions(condNow); applyQuality(true);   // the headset draws everything twice at high resolution, so it gets its own graphics levels
+    // headsets that can resize the image every frame get a sharp buffer and slide within it; others keep a fixed size for the level
+    VRA.vsOK=false; const canScale=typeof XRView!=='undefined' && XRView.prototype && 'requestViewportScale' in XRView.prototype;
+    VRA.fb=canScale?1.15:QUALITY[qi].fb; VRA.vs=canScale?0.78:1; VRA.ceil=1; VRA.min=0.55; VRA.good=VRA.up=0; VRA.cool=-4;
+    renderer.xr.setFramebufferScaleFactor(VRA.fb);
     XR.dolly.add(camera); await renderer.xr.setSession(ses);
     try { const bl=ses.renderState.baseLayer; if (bl && 'fixedFoveation' in bl) bl.fixedFoveation=1; } catch(e){}   // sharp in the middle, cheaper at the edges
     if (ses.updateTargetFrameRate && ses.supportedFrameRates && [...ses.supportedFrameRates].includes(72)) ses.updateTargetFrameRate(72).catch(()=>{});
     ses.addEventListener('end',()=>{ XR.on=false; XR.session=null; scene.add(camera); XR.hud.visible=false; XR.vig.visible=false; if (XR.hud.parent) XR.hud.parent.remove(XR.hud);
-      qi=XR.prevQi; applyQuality(true); if (state==='play'||state==='crash') togglePause(); });
+      BLOBS.visible=false; qi=XR.prevQi; applyConditions(condNow); applyQuality(true); if (state==='play'||state==='crash') togglePause(); });
     initAudio(); if (state==='title'||state==='over') startGame();
-    setTimeout(()=>xrMsg(QUALITY[qi].name+' · click left stick to change'),1500);
+    vrWarm();
+    setTimeout(()=>xrMsg((VRA.auto?'Auto detail · ':'')+QUALITY[qi].name+' · left stick changes'),1500);
   } catch(e){ XR.on=false; console.error(e); toast("Couldn't start VR here. Open the game's web link in the Meta Quest Browser."); }
 }
 let frameErrs=0;
-function frame(now){ const dt=Math.min(0.05,(now-last)/1000); last=now;
+function frame(now,xf){ const rawMs=now-last, dt=Math.min(0.05,rawMs/1000); last=now;
   try { pollPad(); if (XR.on) pollXR(); update(dt); updateCamera(dt);
-    if (XR.on){ xrPre(dt); const ld=QUALITY[qi].lodDist||0; for (const g of chunks.values()){ g.visible=true; const near=Math.abs(g.userData.zc-pz)<ld; for (const m of g.userData.det) m.visible=near; for (const m of g.userData.lite) m.visible=!near; }   // all around you (it's 360°); detailed trees close by on the higher VR levels
-      xrGuard(dt);
+    if (XR.on){ xrPre(dt); vrVis();   // all around you (it's 360°): full trees close by, pictures far away
+      IMP.U.uHead.value.copy(XR.E); HALO_U.uFogD.value=scene.fog.density; HALO_U.uOp.value=clamp((COND.lamp-0.3)/2,0,1)*(1-0.4*(1-SNOW.sunK)); BLOBS.visible=true; updateBlobs();
+      xrAdapt(rawMs); xrViewScale(xf);
       renderer.setRenderTarget(null); renderer.render(scene,camera); xrPost(); }
     else { cullChunks(); renderFrame(); } }
   catch(e){ if (frameErrs++<5) console.error('Sled of Destiny recovered from an error:',e); }   // one glitch should never freeze the game
