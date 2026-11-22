@@ -36,8 +36,7 @@ Open the play link in the Meta Quest Browser, set up your rider, and press **ðŸ¥
 | Left trigger | Brake |
 | A | Hop (and ride again after a crash-out) |
 | Hold grip + thumbstick in the air | Spins (left/right) and flips (forward/back) |
-| Lean your body | Steer (adds to the stick; works on the ground) |
-| Click right thumbstick | Lean steering on/off |
+| Click right thumbstick | Lean-to-steer on/off (off by default) |
 | X | Goggles (when paused: comfort Low, Medium or High; High keeps your view level during tricks) |
 | Y | Pause |
 | B (when paused or after a run) | Leave VR |

@@ -326,7 +326,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
         <span><kbd>C</kbd></span><span>Look back</span>
         <span><kbd>V</kbd></span><span>Switch between rider view and chase view</span>
         <span><kbd>O</kbd></span><span>Goggles on or off: a little more contrast and a little farther through the snow</span>
-        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Thumbstick or lean to steer · right trigger tuck · left trigger brake · A hop · grip + stick for tricks · X goggles · Y pause · VR graphics tune themselves to your headset (click the left stick to pin Fast, Balanced or Detailed)</span>
+        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Thumbstick steer · right trigger tuck · left trigger brake · A hop · grip + stick for tricks · X goggles · Y pause · VR graphics tune themselves to your headset (click the left stick to pin Fast, Balanced or Detailed)</span>
         <span><kbd>P</kbd> / <kbd>Esc</kbd></span><span>Pause</span>
         <span><kbd>M</kbd> · <kbd>N</kbd> · <kbd>F</kbd> · <kbd>Q</kbd></span><span>Sound · music · fullscreen · graphics</span>
       </div>
@@ -392,9 +392,10 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 function mulberry(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 function hash3(x,y,z){ const s=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453; return s-Math.floor(s); }
 const angDiff=(a,b)=>{ let d=a-b; while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI; return d; };
-const SETTINGS=Object.assign({vrCF:1,vrLean:true,vol:1,music:0.8,fov:70,shake:true,chase:false,ghost:true,warn:'off',touch:'auto',goggles:false},(()=>{ try{ return JSON.parse(localStorage.getItem('sledSettings')||'{}'); }catch(e){ return {}; } })());
+const SETTINGS=Object.assign({vrCF:1,vrLean:false,vol:1,music:0.8,fov:70,shake:true,chase:false,ghost:true,warn:'off',touch:'auto',goggles:false},(()=>{ try{ return JSON.parse(localStorage.getItem('sledSettings')||'{}'); }catch(e){ return {}; } })());
 if (!SETTINGS.warnV){ SETTINGS.warn='off'; SETTINGS.warnV=1; }
 if (SETTINGS.vrComfort===true){ SETTINGS.vrCF=2; delete SETTINGS.vrComfort; }
+if ((SETTINGS.vrV||0)<2){ SETTINGS.vrV=2; SETTINGS.vrLean=false; }
 const CF_NAME=['Low','Medium','High'];
 function saveSettings(){ try{ localStorage.setItem('sledSettings',JSON.stringify(SETTINGS)); }catch(e){} }
 const prefersCalm=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -418,9 +419,9 @@ const QUALITY=[
   // headset only, never picked from the menu: Auto by default; click the left thumbstick inside VR to pin one
   // every VR level builds the same full forest (distant trees are cheap pictures), so switching levels never rebuilds the hill
   // lodDist: full 3D trees · impD: lighter 3D trees, pictures beyond · impF: the same for the forest off to the sides
-  {name:'VR Fast',     pr:1, shadow:0, post:false, mblur:false, far:1, flakes:180, lodDist:0,  impD:60,  impF:0,  vr:true, fb:0.8, ahead:6, snowK:0.12, gdK:0.14},
-  {name:'VR Balanced', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:320, lodDist:40, impD:90,  impF:30, vr:true, fb:0.9, ahead:7, snowK:0.28, gdK:0.32},
-  {name:'VR Detailed', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:480, lodDist:75, impD:115, impF:55, vr:true, fb:1.0, ahead:8, snowK:0.42, gdK:0.48},
+  {name:'VR Fast',     pr:1, shadow:0, post:false, mblur:false, far:1, flakes:180, lodDist:0,  impD:80,  impF:30, vr:true, fb:0.8, ahead:7, snowK:0.12, gdK:0.14},
+  {name:'VR Balanced', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:320, lodDist:40, impD:110, impF:55, vr:true, fb:0.9, ahead:7, snowK:0.28, gdK:0.32},
+  {name:'VR Detailed', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:480, lodDist:75, impD:140, impF:80, vr:true, fb:1.0, ahead:7, snowK:0.42, gdK:0.48},
 ];
 const IS_HEADSET=/OculusBrowser|Quest|Pico|Wolvic/i.test(navigator.userAgent);   // standalone headsets: start on light graphics even in the flat view
 let qi=IS_HEADSET?0:2; try { const s=localStorage.getItem('sledQuality'); if (s!==null) qi=clamp(+s,0,2); } catch(e){}
@@ -721,7 +722,7 @@ mountains.children[0].renderOrder=-2; scene.add(mountains);
 
 /* ---------------- procedural textures ---------------- */
 function brickTextures(){ // 512px = 0.864 m: four 21.6 cm brick modules across, twelve 7.2 cm courses up, running bond
-  const N=512, c=canvas(N,N), g=c.getContext('2d'), hc=canvas(N,N), h=hc.getContext('2d'), r=mulberry(4242), RW=N/4, RH=N/12, M=6;
+  const N=512, c=canvas(N,N), g=c.getContext('2d',{willReadFrequently:true}), hc=canvas(N,N), h=hc.getContext('2d',{willReadFrequently:true}), r=mulberry(4242), RW=N/4, RH=N/12, M=6;
   const cols=['#8e3b2a','#9b4530','#7d3424','#a14e36','#86412f','#6f2f22','#a85a3e','#93402c','#b06246'];
   g.fillStyle='#b8b0a3'; g.fillRect(0,0,N,N); h.fillStyle='#3a3a3a'; h.fillRect(0,0,N,N);
   for (let row=0;row<12;row++){ const off=row%2?RW/2:0;
@@ -730,8 +731,8 @@ function brickTextures(){ // 512px = 0.864 m: four 21.6 cm brick modules across,
       g.fillStyle='#'+col.getHexString(); g.fillRect(x0,y0,w,hh);
       const gr=g.createLinearGradient(x0,0,x0+w,0); gr.addColorStop(0,'rgba(0,0,0,'+(r()*0.18)+')'); gr.addColorStop(0.5,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,'+(r()*0.18)+')'); g.fillStyle=gr; g.fillRect(x0,y0,w,hh);
       for (let b=0;b<3;b++){ h.fillStyle='rgb('+(150+b*35)+','+(150+b*35)+','+(150+b*35)+')'; h.fillRect(x0+b,y0+b,w-b*2,hh-b*2); } } }
-  const im=g.getImageData(0,0,N,N), hm=h.getImageData(0,0,N,N);
-  for (let p=0;p<N*N;p++){ const n=(r()-0.5)*26, pit=r()<0.012?-60:0; for (let ch=0;ch<3;ch++) im.data[p*4+ch]=clamp(im.data[p*4+ch]+n,0,255); for (let ch=0;ch<3;ch++) hm.data[p*4+ch]=clamp(hm.data[p*4+ch]+n*0.6+pit,0,255); }
+  const im=g.getImageData(0,0,N,N), hm=h.getImageData(0,0,N,N); const imD=im.data, hmD=hm.data;
+  for (let p=0;p<N*N;p++){ const n=(r()-0.5)*26, pit=r()<0.012?-60:0; for (let ch=0;ch<3;ch++) imD[p*4+ch]=clamp(imD[p*4+ch]+n,0,255); for (let ch=0;ch<3;ch++) hmD[p*4+ch]=clamp(hmD[p*4+ch]+n*0.6+pit,0,255); }
   g.putImageData(im,0,0); h.putImageData(hm,0,0);
   const map=tex(c), nrm=tex(normalFromHeight(hc,4),false);
   const rot=src=>{ const o=canvas(N,N), x=o.getContext('2d'); x.translate(N/2,N/2); x.rotate(Math.PI/2); x.drawImage(src,-N/2,-N/2); return o; };
@@ -743,10 +744,10 @@ function worldUV(geo,ox,oy,oz){ // texture boxes by real size so every brick is 
     if (ax>0.5) uv.setXY(k,z/S,y/S); else if (ay>0.5) uv.setXY(k,x/S,z/S); else uv.setXY(k,x/S,y/S); }
   uv.needsUpdate=true; }
 function normalFromHeight(hc,strength){
-  const w=hc.width,h=hc.height, src=hc.getContext('2d').getImageData(0,0,w,h).data, out=canvas(w,h), og=out.getContext('2d'), im=og.createImageData(w,h);
+  const w=hc.width,h=hc.height, src=hc.getContext('2d').getImageData(0,0,w,h).data, out=canvas(w,h), og=out.getContext('2d'), im=og.createImageData(w,h); const imD=im.data;
   const L=(x,y)=>src[(((y+h)%h)*w+((x+w)%w))*4]/255;
   for (let y=0;y<h;y++) for (let x=0;x<w;x++){ const dx=(L(x+1,y)-L(x-1,y))*strength, dy=(L(x,y+1)-L(x,y-1))*strength, l=Math.hypot(dx,dy,1), i=(y*w+x)*4;
-    im.data[i]=(-dx/l*0.5+0.5)*255; im.data[i+1]=(-dy/l*0.5+0.5)*255; im.data[i+2]=(1/l*0.5+0.5)*255; im.data[i+3]=255; }
+    imD[i]=(-dx/l*0.5+0.5)*255; imD[i+1]=(-dy/l*0.5+0.5)*255; imD[i+2]=(1/l*0.5+0.5)*255; imD[i+3]=255; }
   og.putImageData(im,0,0); return out;
 }
 const ANISO=Math.min(8,renderer.capabilities.getMaxAnisotropy());
@@ -757,8 +758,8 @@ function snowTextures(){
     for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const fx=x/N*per, fy=y/N*per, x0=Math.floor(fx), y0=Math.floor(fy), tx=smooth(fx-x0), ty=smooth(fy-y0);
       const a=L[(y0%per)*per+(x0%per)], b=L[(y0%per)*per+((x0+1)%per)], c=L[((y0+1)%per)*per+(x0%per)], d=L[((y0+1)%per)*per+((x0+1)%per)];
       hgt[y*N+x]+=lerp(lerp(a,b,tx),lerp(c,d,tx),ty)*amp; } }
-  const cc=canvas(N,N), g=cc.getContext('2d'), im=g.createImageData(N,N), hc=canvas(N,N), hg=hc.getContext('2d'), hm=hg.createImageData(N,N);
-  for (let i=0;i<N*N;i++){ const v=hgt[i], b=232+v*14; im.data[i*4]=b-4; im.data[i*4+1]=b-1; im.data[i*4+2]=b+2; im.data[i*4+3]=255; const q=clamp(v*120,0,255); hm.data[i*4]=hm.data[i*4+1]=hm.data[i*4+2]=q; hm.data[i*4+3]=255; }
+  const cc=canvas(N,N), g=cc.getContext('2d'), im=g.createImageData(N,N), hc=canvas(N,N), hg=hc.getContext('2d'), hm=hg.createImageData(N,N); const imD=im.data, hmD=hm.data;
+  for (let i=0;i<N*N;i++){ const v=hgt[i], b=232+v*14; imD[i*4]=b-4; imD[i*4+1]=b-1; imD[i*4+2]=b+2; imD[i*4+3]=255; const q=clamp(v*120,0,255); hmD[i*4]=hmD[i*4+1]=hmD[i*4+2]=q; hmD[i*4+3]=255; }
   g.putImageData(im,0,0); hg.putImageData(hm,0,0);
   return {map:tex(cc), nrm:tex(normalFromHeight(hc,6),false)};
 }
@@ -769,11 +770,11 @@ function barkTexture(){ // grayscale so vertex colour sets the hue (birch, pine,
   return {map:tex(c), nrm:tex(normalFromHeight(c,3),false)};
 }
 function rockTexture(){
-  const N=256, c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N);
+  const N=256, c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N); const imD=im.data;
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const u=x/N*6.2832, v=y/N*6.2832;
     let n=0, a=1, f=1; for(let o=0;o<5;o++){ n+=a*noise2(Math.cos(u)*f*1.6+o*7,Math.sin(u)*f*1.6+Math.cos(v)*f*1.6+Math.sin(v)*f); a*=0.55; f*=2.1; }
     const crack=Math.abs(noise2(x*0.05,y*0.05))<0.03?-60:0; const b=clamp(150+n*110+crack,30,255), i=(y*N+x)*4;
-    im.data[i]=b; im.data[i+1]=b; im.data[i+2]=b; im.data[i+3]=255; }
+    imD[i]=b; imD[i+1]=b; imD[i+2]=b; imD[i+3]=255; }
   g.putImageData(im,0,0); return {map:tex(c), nrm:tex(normalFromHeight(c,5),false)};
 }
 function boughTexture(){ // needles drawn along +x from trunk (u=0) to tip (u=1), centred at v=0.5
@@ -838,8 +839,8 @@ function detailTexture(){ // crisp grains and wind ripples, tileable, used close
       hg[y*N+x]+=lerp(lerp(a,b,tx),lerp(c,dd,tx),ty)*amp; } }
   let mn=1e9,mx=-1e9;
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const i=y*N+x; hg[i]+=0.1*Math.sin((x/N*14+0.8*Math.sin(y/N*6.2832*2)+hg[i]*1.2)*6.2832); mn=Math.min(mn,hg[i]); mx=Math.max(mx,hg[i]); }
-  const c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N);
-  for (let i=0;i<N*N;i++){ const v=(hg[i]-mn)/(mx-mn)*255; im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v; im.data[i*4+3]=255; }
+  const c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N); const imD=im.data;
+  for (let i=0;i<N*N;i++){ const v=(hg[i]-mn)/(mx-mn)*255; imD[i*4]=imD[i*4+1]=imD[i*4+2]=v; imD[i*4+3]=255; }
   g.putImageData(im,0,0); return tex(normalFromHeight(c,7),false);
 }
 function powderTexture(){ // fresh snowfall up close: loose granular fluff and soft little clumps, no wind ripples or crust
@@ -851,9 +852,9 @@ function powderTexture(){ // fresh snowfall up close: loose granular fluff and s
   const cl=new Float32Array(N*N);
   for (let k=0;k<900;k++){ const cx=rng()*N, cy=rng()*N, r=3+Math.pow(rng(),2)*18, a=0.5+rng()*0.6, ri=Math.ceil(r*2);
     for (let dy=-ri;dy<=ri;dy++) for (let dx=-ri;dx<=ri;dx++){ const d2=(dx*dx+dy*dy)/(r*r); if (d2>4) continue; const x=((Math.round(cx)+dx)%N+N)%N, y=((Math.round(cy)+dy)%N+N)%N; cl[y*N+x]=Math.max(cl[y*N+x],a*Math.exp(-d2*1.6)); } }
-  const c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N);
+  const c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N); const imD=im.data;
   let mn=1e9,mx=-1e9; for (let i=0;i<N*N;i++){ hg[i]=fine[i]*0.55+cl[i]*0.8; mn=Math.min(mn,hg[i]); mx=Math.max(mx,hg[i]); }
-  for (let i=0;i<N*N;i++){ const v=(hg[i]-mn)/(mx-mn)*255; im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v; im.data[i*4+3]=255; }
+  for (let i=0;i<N*N;i++){ const v=(hg[i]-mn)/(mx-mn)*255; imD[i*4]=imD[i*4+1]=imD[i*4+2]=v; imD[i*4+3]=255; }
   g.putImageData(im,0,0); return tex(normalFromHeight(c,3.2),false);
 }
 function coreTexture(){ // dense, opaque needle mass for the inside of each pine
@@ -1033,12 +1034,12 @@ function poolTex(){ const c=canvas(128,128), g=c.getContext('2d'), gr=g.createRa
 const POOL_MAT=new T.MeshBasicMaterial({map:poolTex(),transparent:true,blending:T.AdditiveBlending,depthWrite:false,opacity:0,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4});
 const POOL_GEO=new T.PlaneGeometry(11,11).rotateX(-Math.PI/2);
 function lakeTexture(){ // dark clear ice with wind-swept snow drifts, frost and fine cracks
-  const N=512, c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N);
+  const N=512, c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N); const imD=im.data;
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const u=x/N*6.2832, v=y/N*6.2832, i=(y*N+x)*4;
     const n=noise2(Math.cos(u)*1.5+Math.sin(v)*0.4,Math.sin(u)*1.5+Math.cos(v)*2)*0.6+noise2(Math.cos(u)*5,Math.sin(v)*5+Math.sin(u)*3)*0.3;
     const drift=smooth((n+0.02)/0.45)*0.85, fine=noise2(x*0.09,y*0.03)*0.5+0.5, frost=0.5+0.5*noise2(x*0.025+9,y*0.025);
     const r=lerp(lerp(92,150,frost),228,drift)+fine*10, gg=lerp(lerp(132,182,frost),236,drift)+fine*10, b=lerp(lerp(160,204,frost),246,drift)+fine*8;
-    im.data[i]=r; im.data[i+1]=gg; im.data[i+2]=b; im.data[i+3]=255; }
+    imD[i]=r; imD[i+1]=gg; imD[i+2]=b; imD[i+3]=255; }
   g.putImageData(im,0,0); const r=mulberry(61); g.lineCap='round';
   for (let k=0;k<26;k++){ let x=r()*N, y=r()*N, a=r()*6.28; g.strokeStyle=`rgba(225,240,250,${0.25+r()*0.35})`; g.lineWidth=0.6+r()*1.2; g.beginPath(); g.moveTo(x,y);
     for (let s=0;s<14;s++){ a+=(r()-0.5)*0.9; x+=Math.cos(a)*(8+r()*16); y+=Math.sin(a)*(8+r()*16); g.lineTo(x,y); } g.stroke(); }
@@ -1259,8 +1260,8 @@ function shadowCasters(L){ const out=[];
   for (const o of L.cabin.concat(L.workshop)) out.push([o.x,o.z,4.6*(o.s||1),3.4*(o.s||1),0.85]);
   for (const o of L.snowman) out.push([o.x,o.z,2.0,0.5,0.7]);
   return out; }
-function castShade(T_,casters,I){ const {sh,pos,rows,cols,z0}=T_, {dx,dz,Lf}=I, ks=[0,0.18,0.36,0.6];
-  for (const c of casters){ const tx=c[0], tz=c[1], Ht=c[2], Rb=c[3], den=c[4], len=Ht*Lf, ax=tx+dx*len, az=tz+dz*len;
+function* castShade(T_,casters,I){ const {sh,pos,rows,cols,z0}=T_, {dx,dz,Lf}=I, ks=[0,0.18,0.36,0.6]; let n=0;   // yields now and then so building never stalls a headset frame
+  for (const c of casters){ if (++n%40===0) yield; const tx=c[0], tz=c[1], Ht=c[2], Rb=c[3], den=c[4], len=Ht*Lf, ax=tx+dx*len, az=tz+dz*len;
     const zmin=Math.min(tz,az)-Rb, zmax=Math.max(tz,az)+Rb, xmin=Math.min(tx,ax)-Rb, xmax=Math.max(tx,ax)+Rb;
     const r0=Math.max(0,Math.floor((zmin-z0)/ROW)), r1=Math.min(rows-1,Math.ceil((zmax-z0)/ROW)); if (r0>r1) continue;
     for (let r=r0;r<=r1;r++){ const base=r*cols; let lo=0, hi=cols-1; while (lo<hi){ const mm=(lo+hi)>>1; if (pos[(base+mm)*3]<xmin) lo=mm+1; else hi=mm; }
@@ -1323,7 +1324,7 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   // 1) forest placement
   const rng=mulberry(k*7919+3), L={pineN:[],pineF:[],bareN:[],bareF:[],birchN:[],birchF:[],rock:[],log:[],flag:[],cabin:[],fence:[],snowman:[],shanty:[],lamp:[],sign:[],banner:[],icecrack:[],xarch:[],workshop:[]}, occ=[];
   let zrow=0;
-  for (let z=z0+rng()*2; z<z0+CH; z+=3.4){ if (++zrow%5===0) yield; const c0=cx(z), zid=zoneAt(z), tm=zoneTreeMul(z);
+  for (let z=z0+rng()*2; z<z0+CH; z+=3.4){ if (++zrow%(VRB?2:5)===0) yield; const c0=cx(z), zid=zoneAt(z), tm=zoneTreeMul(z);
     for (let u=-82; u<82; u+=Math.abs(u)<40?3.4:6){
       const au=Math.abs(u); let p=au<DIFF.lane?0:au<9?0.15*DIFF.edge:au<14?Math.min(0.75,0.36*DIFF.edge):au<40?0.5:0.56; const roll=rng(), farRoll=rng();
       if (zid==='lake') p=au<48?0:p; else if (au<40) p*=tm; else p*=Math.min(1,tm*2.5);
@@ -1347,7 +1348,7 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   const rows=Math.round(CH/ROW)+1, cols=UCOLS.length;
   const pos=new Float32Array(rows*cols*3), nor=new Float32Array(rows*cols*3), col=new Float32Array(rows*cols*3), uv=new Float32Array(rows*cols*2);
   const n=new T.Vector3(); let ymin=1e9,ymax=-1e9,xmin=1e9,xmax=-1e9;
-  for (let r=0;r<rows;r++){ if (r%8===7) yield; const z=z0+r*ROW, c0=cx(z);
+  for (let r=0;r<rows;r++){ if (r%(VRB?3:8)===(VRB?2:7)) yield; const z=z0+r*ROW, c0=cx(z);
     for (let c=0;c<cols;c++){ const u=UCOLS[c], x=c0+u, y=gH(x,z), i=r*cols+c;
       pos[i*3]=x; pos[i*3+1]=y; pos[i*3+2]=z; normalAtV(x,z,n); nor[i*3]=n.x; nor[i*3+1]=n.y; nor[i*3+2]=n.z;
       let ao=1; const cell=grid.get(key(Math.floor(x/4),Math.floor(z/4)));
@@ -1360,7 +1361,7 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
   const g=new T.BufferGeometry(); g.setAttribute('position',new T.BufferAttribute(pos,3)); g.setAttribute('normal',new T.BufferAttribute(nor,3)); g.setAttribute('color',new T.BufferAttribute(col,3)); g.setAttribute('aShade',new T.BufferAttribute(new Float32Array(rows*cols),1)); g.setAttribute('uv',new T.BufferAttribute(uv,2)); g.setIndex(idx); g.computeBoundingSphere();
   let terrT=null; if (VRB){   // paint tree, rock and cabin shadows into the snow (and into the stretch next door where they spill over)
     const I=shadeInfo(), cs=shadowCasters(L); terrT={sh:g.attributes.aShade.array,pos,rows,cols,z0,attr:g.attributes.aShade,cs};
-    if (I.S>0.02){ castShade(terrT,cs,I); for (const nk of [k-1,k+1]){ const ng=chunks.get(nk), nt=ng&&ng.userData.terrT; if (nt){ castShade(terrT,nt.cs,I); castShade(nt,cs,I); applyShade(nt); } } } }
+    if (I.S>0.02){ yield* castShade(terrT,cs,I); for (const nk of [k-1,k+1]){ const ng=chunks.get(nk), nt=ng&&ng.userData.terrT; if (nt){ yield* castShade(terrT,nt.cs,I); yield* castShade(nt,cs,I); applyShade(nt); } } } }
   const terr=new T.Mesh(g,terrainMat); terr.receiveShadow=true; group.add(terr);
   yield;
   // 3) old sled ruts from earlier riders
@@ -1663,12 +1664,12 @@ function placeSeg(m,a,b){ _sd.subVectors(b,a); const L=_sd.length(); m.position.
 function sleeveGeo(r0,r1,bulge){ const g=new T.CylinderGeometry(r1,r0,1,18,16,false); g.translate(0,0.5,0); const p=g.attributes.position;
   for (let i=0;i<p.count;i++){ const k=1+bulge*Math.abs(Math.sin(p.getY(i)*Math.PI*4)); p.setX(i,p.getX(i)*k); p.setZ(i,p.getZ(i)*k); } g.computeVertexNormals(); return g; }
 function fabricTex(quilt,seed){
-  const N=256, c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N), r=mulberry(seed);
+  const N=256, c=canvas(N,N), g=c.getContext('2d'), im=g.createImageData(N,N), r=mulberry(seed); const imD=im.data;
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const i=(y*N+x)*4;
     let v=0.82+0.04*Math.sin(x*1.9)*Math.sin(y*1.9)+0.06*noise2(x*0.06+seed,y*0.06)+0.035*(r()-0.5);
     if (quilt){ const t=(y%64)/64, puff=Math.sin(Math.PI*t); v*=0.7+0.3*puff; if((y%64)<2) v*=0.6; v+=0.05*noise2(x*0.03,y*0.15+seed)*puff; }
     else v+=0.06*noise2(x*0.02+seed,y*0.09)+0.03*noise2(x*0.2,y*0.05);
-    const q=clamp(v*215,0,255); im.data[i]=im.data[i+1]=im.data[i+2]=q; im.data[i+3]=255; }
+    const q=clamp(v*215,0,255); imD[i]=imD[i+1]=imD[i+2]=q; imD[i+3]=255; }
   g.putImageData(im,0,0); return {map:tex(c), nrm:tex(normalFromHeight(c,quilt?5:2.5),false)};
 }
 function makeMitten(sx,KN){
@@ -2806,6 +2807,7 @@ function landed(hit,at){
   sledSnowKick(Math.min(2.5,hit*0.25+str)); if (str>0.3) sledDeposit(Math.round(str*28),'all');
   if (at>0.5) airTotal+=at;
   if (hit>5 && onIce(px,pz) && zoneAt(pz)==='lake'){ placeCrack(px,pz); sfx('crack',Math.min(1.2,hit/10)); }
+  if (XR.on && (didTrick||at>0.9)) xrFloat(didTrick?(sketchy?'Sketchy landing':'<em>Stomped it</em>'):'<em>'+at.toFixed(1)+'s</em> air');
   if (didTrick) toast(sketchy?'Sketchy landing':'<em>Stomped it</em>');
   else if (at>0.5) toast(sketchy?`Sketchy landing · <em>${at.toFixed(1)}s</em>`:at>0.9?`<em>Clean</em> landing · ${at.toFixed(1)}s air`:`<em>${at.toFixed(1)}s</em> air`);
   else if (sketchy) toast('Sketchy landing');
@@ -2948,7 +2950,7 @@ document.addEventListener('visibilitychange',()=>{ if (document.hidden) clearKey
 /* ---------------- UI ---------------- */
 const fmt=n=>Math.floor(n).toLocaleString('en-US');
 function renderPips(){ const pp=$('pips'); if (pp.children.length!==DIFF.lives) pp.innerHTML='<i></i>'.repeat(DIFF.lives); [...pp.children].forEach((el,i)=>el.classList.toggle('gone',i<crashes)); }
-let toastTimer=0, alarmUntil=0; function toast(html,alarm){ const now=performance.now(); if (typeof XR!=='undefined'&&XR.on) xrFloat(html); if (!alarm && now<alarmUntil) return; if (alarm) alarmUntil=now+1500; const t=$('toast'); t.innerHTML=html; t.classList.toggle('alarm',!!alarm); t.classList.add('on'); lastToast=time; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'),alarm?1700:1300); }
+let toastTimer=0, alarmUntil=0; function toast(html,alarm){ const now=performance.now(); if (typeof XR!=='undefined'&&XR.on) xrMsg(html); if (!alarm && now<alarmUntil) return; if (alarm) alarmUntil=now+1500; const t=$('toast'); t.innerHTML=html; t.classList.toggle('alarm',!!alarm); t.classList.add('on'); lastToast=time; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'),alarm?1700:1300); }
 let fpsW=0, fpsWN=0, manualQ=false, fpsAcc=0, fpsN=0, autoTuned=false, keysT=0, runLive=false, lastEarned=0;
 try { autoTuned=localStorage.getItem('sledQuality')!==null; } catch(e){}
 function clearHazards(){ noseLight.intensity=0; $('glare').style.opacity='0'; yeti.active=false; yeti.g.visible=false; for (const c of critters){ c.active=false; c.g.visible=false; } for (const a of AVAL) a.done=true; avNow=null; clearCracks(); $('chase').hidden=true; $('gauge').hidden=true; }
@@ -3336,7 +3338,11 @@ function personSDF(parts,x,y,z){ let d=1e9; const ax=hX(x), ay=hY(y), az=hZ(z), 
 function personRegion(parts,x,y,z){ let best=1e9, reg='skin'; const ax=hX(x), ay=hY(y), az=hZ(z), bx=x/BX, by=y/BY; for (const q of parts){ const v=q.h?q.f(ax,ay,az)*HS:q.f(bx,by,z)*BY; if (v<best){ best=v; reg=q.reg; } } return reg; }
 function surfaceNets(f,bx0,by0,bz0,bx1,by1,bz1,h){
   const nx=Math.ceil((bx1-bx0)/h)+1, ny=Math.ceil((by1-by0)/h)+1, nz=Math.ceil((bz1-bz0)/h)+1, F=new Float32Array(nx*ny*nz), id=(i,j,k)=>i+nx*(j+ny*k);
-  for (let k=0;k<nz;k++) for (let j=0;j<ny;j++) for (let i=0;i<nx;i++) F[id(i,j,k)]=f(bx0+i*h,by0+j*h,bz0+k*h);
+  // sample a coarse grid first; far from the surface the sign can't change, so only the thin shell around it needs the fine samples (same mesh, a fraction of the work)
+  const C=4, cx_=Math.ceil((nx-1)/C)+1, cy_=Math.ceil((ny-1)/C)+1, cz_=Math.ceil((nz-1)/C)+1, G=new Float32Array(cx_*cy_*cz_), far=h*9;
+  for (let k=0;k<cz_;k++) for (let j=0;j<cy_;j++) for (let i=0;i<cx_;i++) G[i+cx_*(j+cy_*k)]=f(bx0+i*C*h,by0+j*C*h,bz0+k*C*h);
+  for (let k=0;k<nz;k++) for (let j=0;j<ny;j++) for (let i=0;i<nx;i++){ const g=G[Math.min(cx_-1,Math.round(i/C))+cx_*(Math.min(cy_-1,Math.round(j/C))+cy_*Math.min(cz_-1,Math.round(k/C)))];
+    F[id(i,j,k)]=Math.abs(g)>far?g:f(bx0+i*h,by0+j*h,bz0+k*h); }
   const V=new Int32Array(nx*ny*nz).fill(-1), pos=[], idx=[], E=[[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]];
   const co=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]], v8=new Float32Array(8);
   for (let k=0;k<nz-1;k++) for (let j=0;j<ny-1;j++) for (let i=0;i<nx-1;i++){
@@ -3350,7 +3356,7 @@ function surfaceNets(f,bx0,by0,bz0,bx1,by1,bz1,h){
   return {pos,idx}; }
 const PERSON={};
 function makePerson(girl){ const key=girl?'girl':'boy'; if (PERSON[key]) return PERSON[key];
-  const parts=personParts(girl), f=(x,y,z)=>personSDF(parts,x,y,z), {pos,idx}=surfaceNets(f,-0.4,0,-0.3,0.4,1.7,0.36,0.0115);
+  const parts=personParts(girl), f=(x,y,z)=>personSDF(parts,x,y,z), {pos,idx}=surfaceNets(f,-0.4,0,-0.3,0.4,1.7,0.36,IS_HEADSET?0.0155:0.0115);   // a bit coarser on a headset's slower processor
   const n=pos.length/3, nor=new Float32Array(n*3), regs=new Array(n), e=0.004;
   for (let v=0;v<n;v++){ const x=pos[v*3],y=pos[v*3+1],z=pos[v*3+2]; let gx=f(x+e,y,z)-f(x-e,y,z), gy=f(x,y+e,z)-f(x,y-e,z), gz=f(x,y,z+e)-f(x,y,z-e); const L=Math.hypot(gx,gy,gz)||1; nor[v*3]=gx/L; nor[v*3+1]=gy/L; nor[v*3+2]=gz/L; regs[v]=personRegion(parts,x,y,z); }
   const g=new T.BufferGeometry(); g.setAttribute('position',new T.Float32BufferAttribute(pos,3)); g.setAttribute('normal',new T.BufferAttribute(nor,3)); g.setAttribute('color',new T.BufferAttribute(new Float32Array(n*3),3)); g.setIndex(idx);
@@ -3406,10 +3412,10 @@ function makePersonHats(){ const hats=[], H=1.668, lathe=(pts,mat)=>{ const m=ne
 function buildFigure(parent){
   const f=new T.Group(); f.position.set(0.7,0,0.3); f.rotation.y=-0.3; parent.add(f); DRESS.fig=f;
   const body=new T.Group(); f.add(body); DRESS.body=body; DRESS.people={};
-  for (const gk of ['boy','girl']){ const P=makePerson(gk==='girl'); body.add(P.mesh); DRESS.people[gk]=P; }
+  { const gk=(prog.rider&&prog.rider.g)==='girl'?'girl':'boy', P=makePerson(gk==='girl'); body.add(P.mesh); DRESS.people[gk]=P; }   // the other rider is made the first time you pick them
   DRESS.hats=makePersonHats(); for (const h of DRESS.hats) body.add(h);
   DRESS.torso={scale:{y:1}}; DRESS.torsoL=1; DRESS.head=new T.Object3D();
-  DRESS.fit=r=>{ for (const gk of ['boy','girl']){ const P=DRESS.people[gk]; P.mesh.visible=r.g===gk; if (r.g===gk) paintPerson(P,r); } DRESS.hats.forEach((h,k)=>h.visible=k===r.hat); }; }
+  DRESS.fit=r=>{ const want=r.g==='girl'?'girl':'boy'; if (!DRESS.people[want]){ const P=makePerson(want==='girl'); DRESS.body.add(P.mesh); DRESS.people[want]=P; } for (const gk in DRESS.people){ const P=DRESS.people[gk]; P.mesh.visible=want===gk; if (want===gk) paintPerson(P,r); } DRESS.hats.forEach((h,k)=>h.visible=k===r.hat); }; }
 let dressOn=false, dressT=0;
 function updateDress(dt){ if (!dressOn||!DRESS.flames||!DRESS.fig) return; dressT+=dt; const D=DRESS, t=dressT;
   for (const fl of D.flames){ const k=0.82+0.22*Math.sin(t*9+fl.ph)+0.12*Math.sin(t*23+fl.ph*2); fl.f.scale.set(fl.w*(0.9+0.15*Math.sin(t*7+fl.ph)),fl.h*k,1); fl.f.position.y=0.3+fl.h*k/2; fl.f.position.x+=Math.sin(t*5+fl.ph)*0.0004; }
@@ -3466,8 +3472,8 @@ function renderPickers(){
   mk($('diffPick'),Object.entries(DIFFS).map(([k,v])=>[k,v.name]),prog.diff||'medium',id=>{ setDifficulty(id); renderPickers(); }); $('diffInfo').textContent=DIFF_BLURB[prog.diff||'medium'];
   mk($('condPick'),[['random','Random'],...Object.entries(CONDS).map(([k,v])=>[k,v.name])],prog.cond,id=>{ prog.cond=id; saveProg(); if (CONDS[id]) applyConditions(id); renderPickers(); });
   mk($('snowPick'),[['random','Random'],...Object.entries(SNOWFALL).map(([k,v])=>[k,v.name+(v.mult>1?' ×'+v.mult:'')])],prog.snow,id=>{ prog.snow=id; saveProg(); if (SNOWFALL[id]) applySnowfall(id); renderPickers(); });
-  mk($('themePick'),[['classic','Classic'],['christmas','🎄 Christmas']],prog.theme==='christmas'?'christmas':'classic',id=>{ prog.theme=id; saveProg(); applyTheme(id); if (state==='title') rebuildChunks(); renderPickers(); });
-  mk($('surfPick'),[['random','Random'],...Object.entries(SURFS).map(([k,v])=>[k,v.name])],prog.surf,id=>{ prog.surf=id; saveProg(); const wasP=surfNow==='powder'; if (SURFS[id]) applySurface(id); if (wasP!==(surfNow==='powder')) rebuildChunks(); renderPickers(); });
+  mk($('themePick'),[['classic','Classic'],['christmas','🎄 Christmas']],prog.theme==='christmas'?'christmas':'classic',id=>{ prog.theme=id; saveProg(); applyTheme(id); renderPickers(); });
+  mk($('surfPick'),[['random','Random'],...Object.entries(SURFS).map(([k,v])=>[k,v.name])],prog.surf,id=>{ prog.surf=id; saveProg(); const wasP=surfNow==='powder'; if (SURFS[id]) applySurface(id); if (wasP!==(surfNow==='powder') && state!=='title') rebuildChunks(); renderPickers(); });
   const bt=$('bestTitle'); bt.hidden=false; bt.textContent='Wallet: '+fmt(prog.bank||0)+' coins'+(best>0||prog.bestScore>0?' · Longest run: '+fmt(best)+' ft · High score: '+fmt(prog.bestScore||0):'')+''; }
 function qualityLabels(){ const n=QUALITY[qi].name; $('qualBtn').textContent=n; $('qualBtn2').textContent='Graphics: '+n; }
 function applyQuality(rebuild){
@@ -3737,11 +3743,11 @@ scene.add(XR.dolly); renderer.xr.enabled=true; renderer.xr.setReferenceSpaceType
 // rumble in the controllers: landings by how hard you hit, crashes, close calls, a light buzz over rough snow
 function vrBuzz(v,ms,side){ const ses=XR.session; if (!ses) return; for (const src of ses.inputSources){ if (side&&src.handedness!==side) continue; const h=src.gamepad&&src.gamepad.hapticActuators&&src.gamepad.hapticActuators[0]; if (h&&h.pulse) try{ h.pulse(clamp(v,0,1),ms); }catch(e){} } }
 // trick scores and landing calls float up out in front of you instead of sitting on the dashboard
-const XF=(()=>{ const c=canvas(1024,192), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.6,0.3),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0})); m.renderOrder=998; m.visible=false; XR.dolly.add(m); return {c,t,m,life:0}; })();
+const XF=(()=>{ const c=canvas(1024,192), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.1,0.2),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0})); m.renderOrder=998; m.visible=false; XR.dolly.add(m); return {c,t,m,life:0}; })();
 function xrFloat(html){ const txt=String(html).replace(/<[^>]+>/g,''), em=(String(html).match(/<em>(.*?)<\/em>/)||[])[1], g=XF.c.getContext('2d'); g.clearRect(0,0,1024,192);
   g.textAlign='center'; g.textBaseline='middle'; g.font='800 84px "Barlow Condensed", Arial, sans-serif'; g.lineWidth=10; g.strokeStyle='rgba(10,16,24,0.75)'; g.strokeText(txt.slice(0,30),512,96);
   g.fillStyle=em&&txt.indexOf(em)===0?'#ffc35a':'#ffffff'; g.fillText(txt.slice(0,30),512,96); XF.t.needsUpdate=true; XF.life=1.8; XF.m.visible=true; }
-function updateXF(dt){ if (XF.life<=0){ XF.m.visible=false; return; } XF.life-=dt; const k=1-XF.life/1.8; XF.m.position.set(0,0.05+k*0.35,-2.3); XF.m.material.opacity=Math.min(1,XF.life*2)*Math.min(1,k*8); }
+function updateXF(dt){ if (XF.life<=0){ XF.m.visible=false; return; } XF.life-=dt; const k=1-XF.life/1.8; XF.m.position.set(0,0.5+k*0.25,-3); XF.m.material.opacity=0.9*Math.min(1,XF.life*2)*Math.min(1,k*8); }
 function xrMsg(html){ XR.msg=String(html).replace(/<[^>]+>/g,''); XR.msgT=2.2; }
 function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512,256);
   const panel=(y,h)=>{ g.fillStyle='rgba(13,20,28,0.62)'; g.beginPath(); g.roundRect?g.roundRect(8,y,496,h,22):g.rect(8,y,496,h); g.fill(); };
@@ -3759,7 +3765,7 @@ function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512
 function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)=>{ const was=XR.btnWas[id]; XR.btnWas[id]=on; return on&&!was; };
   for (const src of ses.inputSources){ const gp=src.gamepad; if (!gp) continue; const L=src.handedness==='left', ax=gp.axes[2]||0, ay=gp.axes[3]||0, b=i=>!!gp.buttons[i]?.pressed;
     const dz=(v,d)=>Math.abs(v)<d?0:Math.sign(v)*(Math.abs(v)-d)/(1-d);   // a resting thumb never counts as input
-    if (Math.abs(ax)>0.2) padSteer=dz(ax,0.2); if (Math.abs(ay)>0.3) padPitch=dz(ay,0.3);
+    if (Math.abs(ax)>0.2) padSteer=clamp(dz(ax,0.2)*1.3,-1,1);   // full lock before the stick hits the rim, like holding an arrow key if (Math.abs(ay)>0.3) padPitch=dz(ay,0.3);
     if (!L && pressed('RS',b(3))){ SETTINGS.vrLean=!SETTINGS.vrLean; saveSettings(); XR.leanInit=false; xrMsg(SETTINGS.vrLean?'Lean to steer: on':'Lean to steer: off'); XR.hudT=0; }
     if (b(1)) padTrick=true;
     if (L){ if (pressed('LS',b(3))) cycleVRLevel(); if (b(0)) padBrake=true; if (pressed('X',b(4))){ if (state==='pause'||state==='over'){ SETTINGS.vrCF=(SETTINGS.vrCF+1)%3; saveSettings(); xrMsg('Comfort: '+CF_NAME[SETTINGS.vrCF]); XR.hudT=0; } else setGoggles(!SETTINGS.goggles); } if (pressed('Y',b(5))) togglePause(); }
@@ -3769,7 +3775,7 @@ function xrPre(dt){ // the sled carries the dolly; the headset adds your own hea
   XR.E.copy(camera.position); XR.Q.copy(camera.quaternion);
   const air=state==='play'&&!onGround, full=SETTINGS.vrCF<2, DO=DECK_OFF[SLED.form], cf=[0.55,1,1.45][SETTINGS.vrCF]||1;
   // comfort: smooth out the small, fast up-and-down jiggle from bumps (your inner ear hates that most); big moves still come straight through
-  if (!XR.syOk || Math.abs(XR.E.y-XR.sy)>1.5) XR.sy=XR.E.y; XR.sy+=(XR.E.y-XR.sy)*Math.min(1,dt*(air?20:11)); XR.sy=clamp(XR.sy,XR.E.y-0.12,XR.E.y+0.12); XR.syOk=true;
+  if (!XR.syOk || Math.abs(XR.E.y-XR.sy)>1.5) XR.sy=XR.E.y; XR.sy+=(XR.E.y-XR.sy)*Math.min(1,dt*(air?20:11)); XR.sy=clamp(XR.sy,XR.E.y-0.06,XR.E.y+0.06); XR.syOk=true;
   const EP=_xe.set(XR.E.x,XR.sy,XR.E.z);
   const yawB=camYaw+groundSpin+Math.PI+(air?spinOff:0), pitchB=camPitch-tuckAmt*0.06+DO[2]+(air?flipOff:0), rollB=air?camRoll:camRoll*0.4;   // the sled exactly as it is, spins and flips included
   // your view rides the sled through spins, flips and tilts in the air just like on the computer (on the ground it stays level for comfort)
@@ -3784,10 +3790,9 @@ function xrPre(dt){ // the sled carries the dolly; the headset adds your own hea
   // comfort edges: the view narrows softly when the motion your eyes see is strongest (speed, turning, tricks, drops) and opens back up when it calms
   const sp=speedNow(), yr=Math.abs(angDiff(camYaw+groundSpin,XR.lastYaw??camYaw))/Math.max(dt,1e-3); XR.lastYaw=camYaw+groundSpin; XR.yr=(XR.yr||0)+(yr-(XR.yr||0))*Math.min(1,dt*6);
   const fall=air?clamp(-vy/14,0,1):0, trick=air&&full?clamp((Math.abs(spinRate)+Math.abs(flipRate))/10,0,1):0;
-  let vg=state==='play'?(clamp((sp-12)/32,0,0.5)+clamp(XR.yr/2.2,0,0.45)+fall*0.25+trick*0.4)*cf:state==='crash'?0.85:0;
+  let vg=state==='play'?(clamp((sp-18)/40,0,0.25)+clamp((XR.yr-1.1)/2.5,0,0.3)+fall*0.15+trick*0.35)*cf:state==='crash'?0.7:0;
   XR.vg=(XR.vg||0)+(Math.min(0.88,vg)-(XR.vg||0))*Math.min(1,dt*(vg>(XR.vg||0)?7:2.5)); XR.vig.visible=true; XR.vig.material.opacity=XR.vg;
   updateXF(dt);
-  XR.rumT=(XR.rumT||0)-dt; if (XR.rumT<=0){ XR.rumT=0.11; if (state==='play'&&onGround&&sp>9) vrBuzz((0.03+0.05*clamp((sp-9)/20,0,1))*(surfNow==='crust'?1.8:surfNow==='powder'?0.6:1)*(onIce(px,pz)?0.4:1),60); }
   camera.position.set(0,0,0); camera.quaternion.identity(); camera.updateMatrixWorld(true); }
 const _xe=new T.Vector3(), _xq=new T.Euler(), _hw=new T.Vector3(), _hf=new T.Vector3(), _hu=new T.Vector3();
 function xrPost(dt){
@@ -3818,11 +3823,11 @@ function xrAdapt(ms){ const A=VRA; if (state!=='play'){ A.win=A.miss=A.n=0; A.co
   const mr=A.miss/Math.max(1,A.n); A.win=A.miss=A.n=0;
   if (mr>0.05){ A.good=0; A.up=0;   // dropping frames: soften the image first, then lighten the level
     if (A.vsOK && A.vs>A.min+0.001){ A.ceil=Math.max(A.min,A.vs-0.03); A.vs=Math.max(A.min,A.vs-(mr>0.25?0.12:0.05)); }
-    else if (A.auto && qi>3){ vrTier(qi-1); A.vs=Math.min(1,A.vs+0.1); A.ceil=1; A.cool=-3; xrMsg('Auto detail · '+QUALITY[qi].name); } }
+    else if (A.auto && qi>3){ vrTier(qi-1); A.vs=Math.min(1,A.vs+0.1); A.ceil=1; A.cool=-3; } }
   else { A.good++; A.up++;
     if (A.vsOK && A.good>=2 && A.vs<A.ceil-0.001){ A.vs=Math.min(A.ceil,A.vs+0.025); A.good=0; }
     if (A.up%20===0) A.ceil=Math.min(1,A.ceil+0.03);   // try a little higher again now and then
-    if (A.auto && qi<5 && A.up>=12 && (!A.vsOK || A.vs>=0.97)){ vrTier(qi+1); A.vs=Math.max(A.min,A.vs-0.12); A.up=0; A.cool=-3; xrMsg('Auto detail · '+QUALITY[qi].name); } } }
+    if (A.auto && qi<5 && A.up>=25 && (!A.vsOK || A.vs>=0.99)){ vrTier(qi+1); A.vs=Math.max(A.min,A.vs-0.12); A.up=0; A.cool=-3; } } }
 // live soft shadows under the sled, the animals, the yeti and the reindeer team
 const _bq=new T.Quaternion(), _bq2=new T.Quaternion(), _bn=new T.Vector3(), _bs=new T.Vector3(), _bp=new T.Vector3(), _bc=new T.Color();
 function updateBlobs(){ const I=shadeInfo(); let n=0; if (I.S<0.03){ BLOBS.count=0; return; }
@@ -3838,7 +3843,7 @@ async function enterVR(){
   if (!navigator.xr){ toast('VR needs a headset browser, like the Meta Quest Browser'); return; }
   try {
     const ses=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']}); XR.session=ses; XR.on=true;
-    XR.prevQi=qi; qi=vrLevel(); applyConditions(condNow); applyQuality(true);   // the headset draws everything twice at high resolution, so it gets its own graphics levels
+    XR.prevQi=qi; qi=vrLevel(); applyConditions(condNow); applyQuality(!(state==='title'||state==='over'));   // the headset draws everything twice at high resolution, so it gets its own graphics levels
     // headsets that can resize the image every frame get a sharp buffer and slide within it; others keep a fixed size for the level
     VRA.vsOK=false; const canScale=typeof XRView!=='undefined' && XRView.prototype && 'requestViewportScale' in XRView.prototype;
     VRA.fb=canScale?1.15:QUALITY[qi].fb; VRA.vs=canScale?0.78:1; VRA.ceil=1; VRA.min=0.55; VRA.good=VRA.up=0; VRA.cool=-4;
