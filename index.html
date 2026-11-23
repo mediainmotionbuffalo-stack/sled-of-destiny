@@ -326,7 +326,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
         <span><kbd>C</kbd></span><span>Look back</span>
         <span><kbd>V</kbd></span><span>Switch between rider view and chase view</span>
         <span><kbd>O</kbd></span><span>Goggles on or off: a little more contrast and a little farther through the snow</span>
-        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Thumbstick steer · right trigger tuck · left trigger brake · A hop · grip + stick for tricks · X goggles · Y pause · VR graphics tune themselves to your headset (click the left stick to pin Fast, Balanced or Detailed)</span>
+        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Left stick steer · right stick spins and flips in the air · right grip tuck · left grip brake · A jump · B goggles · Y look back · click left stick to pause</span>
         <span><kbd>P</kbd> / <kbd>Esc</kbd></span><span>Pause</span>
         <span><kbd>M</kbd> · <kbd>N</kbd> · <kbd>F</kbd> · <kbd>Q</kbd></span><span>Sound · music · fullscreen · graphics</span>
       </div>
@@ -420,9 +420,9 @@ const QUALITY=[
   // headset only, never picked from the menu: Auto by default; click the left thumbstick inside VR to pin one
   // every VR level builds the same full forest (distant trees are cheap pictures), so switching levels never rebuilds the hill
   // lodDist: full 3D trees · impD: lighter 3D trees, pictures beyond · impF: the same for the forest off to the sides
-  {name:'VR Fast',     pr:1, shadow:0, post:false, mblur:false, far:1, flakes:180, lodDist:0,  impD:80,  impF:30, vr:true, fb:0.8, ahead:7, snowK:0.12, gdK:0.14},
-  {name:'VR Balanced', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:320, lodDist:40, impD:110, impF:55, vr:true, fb:0.9, ahead:7, snowK:0.28, gdK:0.32},
-  {name:'VR Detailed', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:480, lodDist:75, impD:140, impF:80, vr:true, fb:1.0, ahead:7, snowK:0.42, gdK:0.48},
+  {name:'VR Fast',     pr:1, shadow:0, post:false, mblur:false, far:1, flakes:180, lodDist:0,  impD:80,  impF:30, vr:true, fb:0.8, ahead:9, snowK:0.12, gdK:0.14},
+  {name:'VR Balanced', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:320, lodDist:40, impD:110, impF:55, vr:true, fb:0.9, ahead:9, snowK:0.28, gdK:0.32},
+  {name:'VR Detailed', pr:1, shadow:0, post:false, mblur:false, far:1, flakes:480, lodDist:75, impD:140, impF:80, vr:true, fb:1.0, ahead:9, snowK:0.42, gdK:0.48},
 ];
 const IS_HEADSET=/OculusBrowser|Quest|Pico|Wolvic/i.test(navigator.userAgent);   // standalone headsets: start on light graphics even in the flat view
 let qi=IS_HEADSET?0:2; try { const s=localStorage.getItem('sledQuality'); if (s!==null) qi=clamp(+s,0,2); } catch(e){}
@@ -1461,7 +1461,7 @@ function updateChunks(all){
   const kc=Math.floor(pz/CH);
   const ahead=QUALITY[qi].ahead||8; for (let k=Math.max(0,kc-1);k<=kc+ahead;k++) if(!chunks.has(k) && !buildQueue.includes(k) && !(building&&building.k===k)) buildQueue.push(k);
   buildQueue.sort((a,b)=>a-b);
-  if (all){ if (building){ while(!building.g.next().done); building=null; } while (buildQueue.length){ const k=buildQueue.shift(); if(!chunks.has(k)) buildChunk(k); } }
+  if (all){ if (building){ while(!building.g.next().done); building=null; } const lim=XR.on?kc+3:1e9; while (buildQueue.length && buildQueue[0]<=lim){ const k=buildQueue.shift(); if(!chunks.has(k)) buildChunk(k); } }   // headset: the rest builds in the background
   else { const t0=performance.now();   // spend a few milliseconds per frame on the next chunk; finish at once if the rider is about to reach it
     const budget=XR.on?1.5:4; while (performance.now()-t0<budget){ if (!building){ while (buildQueue.length && chunks.has(buildQueue[0])) buildQueue.shift(); if (!buildQueue.length) break; const k=buildQueue.shift(); building={k,g:buildChunkGen(k)}; }
       const urgent=building.k<=kc+1; if (building.g.next().done || (urgent && (()=>{ while(!building.g.next().done); return true; })())) building=null; } }
@@ -2774,7 +2774,7 @@ function airControl(dt,steer,tuckKey){ // keys set how fast you rotate; hands-of
   if (trick && pRaw) flipRate+=(pRaw*5.6*SLED.flip-flipRate)*Math.min(1,dt*5);
   else { const tg=Math.round(flipOff/TAU)*TAU; flipRate+=(clamp((tg-flipOff)*2.6,-5,5)-flipRate)*Math.min(1,dt*2.8); }
   spinOff+=spinRate*dt; flipOff+=flipRate*dt; spinTot+=spinRate*dt; flipTot+=flipRate*dt;
-  const hk=XR.on?'vrHintRuns':'hintRuns'; if (!hintShown && (prog[hk]||0)<(XR.on?6:3) && time-airStart>(XR.on?0.35:0.7) && pred && !trick){ hintShown=true; prog[hk]=(prog[hk]||0)+1; saveProg(); if (XR.on) xrFloat('<em>Hold GRIP</em> + stick = trick',2.4); else toast('Hold <em>Shift</em> + arrows to spin or flip'); }
+  const hk=XR.on?'vrHintRuns':'hintRuns'; if (!hintShown && (prog[hk]||0)<(XR.on?6:3) && time-airStart>(XR.on?0.35:0.7) && pred && !trick){ hintShown=true; prog[hk]=(prog[hk]||0)+1; saveProg(); if (XR.on) xrFloat('<em>Right stick</em> = spin / flip',2.4); else toast('Hold <em>Shift</em> + arrows to spin or flip'); }
 }
 /* ---------------- score and combos ---------------- */
 function comboAdd(pts,label){ if (state!=='play') return; comboMult=Math.min(10,comboMult+1); RUN.comboMax=Math.max(RUN.comboMax||0,comboMult); comboPts+=Math.round(pts); comboT=5; comboLabel=label; renderCombo(); }
@@ -3742,7 +3742,7 @@ let last=performance.now();
 /* ---------------- VR (Meta Quest and other WebXR headsets) ----------------
    You sit on the sled: your head looks around freely while the sled carries you. The world stays level (only your
    heading turns), spins and flips don't swing your view, and a soft dark edge closes in at speed, all to keep it comfortable.
-   Steer with either thumbstick · right trigger tuck · left trigger brake · A hop · hold a grip + stick for spins and flips
+   Left stick steer · right stick spins and flips in the air · right grip tuck · left grip brake · A jump · B goggles · Y look back · click left stick to pause
    · X goggles · Y pause. */
 const XR={vp:0,vr:0,guardT:-6,guardN:0,on:false,session:null,dolly:new T.Group(),hud:null,hudC:null,hudT:0,msg:'',msgT:0,prevQi:2,btnWas:{},E:new T.Vector3(),Q:new T.Quaternion(),vig:null};
 scene.add(XR.dolly); renderer.xr.enabled=true; renderer.xr.setReferenceSpaceType('local');
@@ -3773,7 +3773,7 @@ function updateStreaks(dt,sp){ const S=STREAK, P=S.pts, fx=Math.sin(heading), fz
 const CARD=(()=>{ const c=canvas(1024,620), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.24,0.75),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0})); m.renderOrder=997; m.visible=false; XR.dolly.add(m);
   const g=c.getContext('2d'); g.fillStyle='rgba(12,20,30,0.86)'; g.beginPath(); g.roundRect?g.roundRect(0,0,1024,620,40):g.rect(0,0,1024,620); g.fill();
   g.textAlign='left'; g.fillStyle='#ffc35a'; g.font='800 64px "Barlow Condensed", Arial, sans-serif'; g.fillText('HOW TO RIDE',60,100);
-  const rows=[['Thumbstick','steer'],['Right trigger','tuck for speed'],['Left trigger','brake'],['A','jump'],['Hold GRIP + stick (in the air)','spin and flip'],['Y','pause']];
+  const rows=[['Left stick','steer'],['Right grip','tuck for speed'],['Left grip','brake'],['A','jump'],['Right stick (in the air)','spin and flip'],['Y  ·  left-stick click','look back  ·  pause']];
   rows.forEach(([a,b],k)=>{ g.font='700 40px Arial, sans-serif'; g.fillStyle='#ffffff'; g.fillText(a,60,180+k*70); g.fillStyle='#b9c6d2'; g.font='500 40px Arial, sans-serif'; g.fillText(b,640,180+k*70); }); t.needsUpdate=true;
   return {m,life:0}; })();
 function showCard(){ CARD.life=8; }
@@ -3792,22 +3792,34 @@ function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512
   if (state==='over'||state==='pause'){ panel(8,240); g.textAlign='center';
     g.font='800 44px "Barlow Condensed", Arial, sans-serif'; g.fillText(state==='over'?'RUN OVER':'PAUSED',256,46);
     g.font='600 26px Arial, sans-serif'; g.fillText(state==='over'?(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft · score '+fmt(score)+(lastEarned?' · +'+fmt(lastEarned)+' coins':'')):'',256,96);
-    g.fillStyle='#ffc35a'; g.font='700 26px Arial, sans-serif'; g.fillText(state==='over'?'A: ride again':'Y: keep riding',256,150); g.fillStyle='#f4f7fa'; g.fillText('B: leave VR',256,190); g.font='600 21px Arial, sans-serif'; g.fillStyle='#c9d3dc'; g.fillText('X: comfort '+CF_NAME[SETTINGS.vrCF]+' · right stick: lean steer '+(SETTINGS.vrLean?'on':'off'),256,228);
+    g.fillStyle='#ffc35a'; g.font='700 26px Arial, sans-serif'; g.fillText(state==='over'?'A: ride again':'Click left stick: keep riding',256,140); g.fillStyle='#f4f7fa'; g.fillText('B: leave VR',256,176); g.font='600 19px Arial, sans-serif'; g.fillStyle='#c9d3dc'; g.fillText('X: view '+CF_NAME[SETTINGS.vrCF]+(state==='pause'?' · A: graphics '+(VRA.auto?'Auto':QUALITY[qi].name.replace('VR ','')):''),256,210); g.fillText('Click right stick: lean steer '+(SETTINGS.vrLean?'on':'off'),256,236);
   } else { panel(132,116); g.textAlign='left';
     g.font='800 64px "Barlow Condensed", Arial, sans-serif'; g.fillText(Math.round(speedNow()*2.237)+'',30,192); g.font='600 22px Arial, sans-serif'; g.fillText('mph',30+g.measureText('000').width*1.9,204);
     g.textAlign='right'; g.font='700 30px Arial, sans-serif'; g.fillText(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft',486,166); g.font='600 22px Arial, sans-serif'; g.fillStyle='#c9d3dc';
     g.fillText('score '+fmt(score)+' · '+'●'.repeat(Math.max(0,DIFF.lives-crashes))+'○'.repeat(Math.min(DIFF.lives,crashes)),486,206); g.fillText(ZNAME[zoneAt(pz)]+(SETTINGS.goggles?' · goggles':''),486,234);
     if (XR.msgT>0){ panel(18,92); g.textAlign='center'; g.fillStyle='#f4f7fa'; g.font='700 30px Arial, sans-serif'; g.fillText(XR.msg.slice(0,34),256,64); } }
   XR.hud.material.map.needsUpdate=true; }
+// Controller layout. Right hand: grip tuck, trigger trick, A jump, B goggles, stick = tricks.
+// Left hand: grip brake, trigger trick, X trick, Y look back, stick = steer. Click the left stick to pause.
 function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)=>{ const was=XR.btnWas[id]; XR.btnWas[id]=on; return on&&!was; };
+  const dz=(v,d)=>Math.abs(v)<d?0:Math.sign(v)*(Math.abs(v)-d)/(1-d);   // a resting thumb never counts as input
+  let tx=0, ty=0, trickBtn=false; const paused=state==='pause'||state==='over';
   for (const src of ses.inputSources){ const gp=src.gamepad; if (!gp) continue; const L=src.handedness==='left', ax=gp.axes[2]||0, ay=gp.axes[3]||0, b=i=>!!gp.buttons[i]?.pressed;
-    const dz=(v,d)=>Math.abs(v)<d?0:Math.sign(v)*(Math.abs(v)-d)/(1-d);   // a resting thumb never counts as input
-    if (Math.abs(ax)>0.2) padSteer=clamp(dz(ax,0.2)*1.3,-1,1);   // full lock before the stick hits the rim, like holding an arrow key if (Math.abs(ay)>0.3) padPitch=dz(ay,0.3);
-    if (!L && pressed('RS',b(3))){ SETTINGS.vrLean=!SETTINGS.vrLean; saveSettings(); XR.leanInit=false; xrMsg(SETTINGS.vrLean?'Lean to steer: on':'Lean to steer: off'); XR.hudT=0; }
-    if (b(1)) padTrick=true;
-    if (L){ if (pressed('LS',b(3))) cycleVRLevel(); if (b(0)) padBrake=true; if (pressed('X',b(4))){ if (state==='pause'||state==='over'){ SETTINGS.vrCF=(SETTINGS.vrCF+1)%3; saveSettings(); xrMsg('Comfort: '+CF_NAME[SETTINGS.vrCF]); XR.hudT=0; } else setGoggles(!SETTINGS.goggles); } if (pressed('Y',b(5))) togglePause(); }
-    if (!L){ if (b(0)) padTuck=true; const a=pressed('A',b(4)); if (a){ if (state==='play'){ hopReq=0.15; vrBuzz(0.18,22,'right'); } else if (state==='over') startGame(); } if (pressed('B',b(5)) && (state==='over'||state==='pause')) ses.end(); } }
-  if (SETTINGS.vrLean && state==='play' && onGround && XR.lean) padSteer=clamp(padSteer+XR.lean,-1,1); }   // lean your body into the turn (adds to the stick)
+    if (L){
+      if (Math.abs(ax)>0.2) padSteer=clamp(dz(ax,0.2)*1.3,-1,1);   // steering: full lock a little before the rim, like holding an arrow key
+      if (b(1)) padBrake=true; if (b(0)||b(4)) trickBtn=true; if (b(5)) padLook=true;
+      if (pressed('LS',b(3))) togglePause();
+      if (pressed('X',b(4)) && paused){ SETTINGS.vrCF=(SETTINGS.vrCF+1)%3; saveSettings(); xrMsg('View: '+CF_NAME[SETTINGS.vrCF]); XR.hudT=0; } }
+    else {
+      tx=dz(ax,0.25); ty=dz(ay,0.25);
+      if (b(1)) padTuck=true; if (b(0)) trickBtn=true;
+      const a=pressed('A',b(4)); if (a){ if (state==='play'){ hopReq=0.15; vrBuzz(0.18,22,'right'); } else if (state==='over') startGame(); else if (state==='pause') cycleVRLevel(); }
+      if (pressed('B',b(5))){ if (paused) ses.end(); else setGoggles(!SETTINGS.goggles); }
+      if (pressed('RS',b(3)) && paused){ SETTINGS.vrLean=!SETTINGS.vrLean; saveSettings(); XR.leanInit=false; xrMsg(SETTINGS.vrLean?'Lean to steer: on':'Lean to steer: off'); XR.hudT=0; } } }
+  // tricks: in the air the right stick does them by itself (a trick button works too); on the ground a trick button + right stick spins a saucer or tube
+  const air=state==='play'&&!onGround&&time-airStart>0.12, stick=Math.abs(tx)>0||Math.abs(ty)>0;   // (not on the tiny hops over bumps)
+  if (trickBtn || (air&&stick)){ padTrick=true; if (stick){ padSteer=clamp(tx*1.3,-1,1); padPitch=clamp(ty*1.3,-1,1); } else if (air){ padSteer=0; } }
+  if (SETTINGS.vrLean && state==='play' && onGround && XR.lean && !padTrick) padSteer=clamp(padSteer+XR.lean,-1,1); }   // lean your body into the turn (adds to the stick)
 function xrPre(dt){ // the sled carries the dolly; the headset adds your own head movement on top
   XR.E.copy(camera.position); XR.Q.copy(camera.quaternion);
   const air=state==='play'&&!onGround, full=SETTINGS.vrCF<2, DO=DECK_OFF[SLED.form], cf=[0.35,1,1.45][SETTINGS.vrCF];
@@ -3818,7 +3830,7 @@ function xrPre(dt){ // the sled carries the dolly; the headset adds your own hea
   // your view rides the sled through spins, flips and tilts in the air just like on the computer (on the ground it stays level for comfort)
   const ff=SETTINGS.vrCF===0, tp=(air&&full?flipOff:0)+(ff?camPitch-tuckAmt*0.06+DO[2]:0), tr=(air&&full)||ff?camRoll:0, k=Math.min(1,dt*(air?16:ff?12:8));   // Full feel: you look along the sled like the computer camera
   XR.vp-=Math.round((XR.vp-tp)/TAU)*TAU; XR.vp+=(tp-XR.vp)*k; XR.vr+=(tr-XR.vr)*k;
-  XR.dolly.rotation.set(XR.vp,(full?yawB:camYaw+groundSpin+Math.PI)-(XR.c?XR.c.yaw:0),XR.vr,'YXZ');
+  XR.dolly.rotation.set(XR.vp,(full?yawB:camYaw+groundSpin+Math.PI)-(XR.c?XR.c.yaw:0)+lookAmt*Math.PI*0.95,XR.vr,'YXZ');   // Y: look back over your shoulder
   XR.dolly.position.copy(EP); if (XR.c) XR.dolly.position.sub(_xc.set(XR.c.x,XR.c.y,XR.c.z).applyQuaternion(XR.dolly.quaternion));
   if (rig.parent!==fpAnchor){ fpAnchor.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
   fpAnchor.position.copy(EP); fpAnchor.rotation.set(pitchB,yawB,rollB,'YXZ'); rig.visible=state!=='crash';
@@ -3870,7 +3882,7 @@ function xrAdapt(ms){ const A=VRA; if (state!=='play'){ A.win=A.miss=A.n=0; A.co
     if (A.up%20===0) A.ceil=Math.min(1,A.ceil+0.03);   // try a little higher again now and then
     if (A.auto && qi<5 && A.up>=25 && (!A.vsOK || A.vs>=0.99)){ vrTier(qi+1); A.vs=Math.max(A.min,A.vs-0.12); A.up=0; A.cool=-3; } } }
 // live soft shadows under the sled, the animals, the yeti and the reindeer team
-const _bq=new T.Quaternion(), _bq2=new T.Quaternion(), _bn=new T.Vector3(), _bs=new T.Vector3(), _bp=new T.Vector3(), _bc=new T.Color();
+const _bw=new T.Vector3(), _bq=new T.Quaternion(), _bq2=new T.Quaternion(), _bn=new T.Vector3(), _bs=new T.Vector3(), _bp=new T.Vector3(), _bc=new T.Color();
 function updateBlobs(){ const I=shadeInfo(); let n=0; if (I.S<0.03){ BLOBS.count=0; return; }
   const put=(x,y0,z,w,l,yaw,hAbove,k)=>{ if (n>=24) return; const off=Math.min(5,hAbove*I.Lf), sx=x+I.dx*off, sz=z+I.dz*off, gy=gH(sx,sz), f=clamp(1-hAbove/6,0,1)*k; if (f<0.02) return;
     normalAtV(sx,sz,_bn); _bq.setFromUnitVectors(UP,_bn).multiply(_bq2.setFromAxisAngle(UP,yaw)); const sc=1+hAbove*0.12;
@@ -3878,7 +3890,7 @@ function updateBlobs(){ const I=shadeInfo(); let n=0; if (I.S<0.03){ BLOBS.count
   if (state!=='crash') put(px,0,pz,1.25,2.1,heading,Math.max(0,py-gH(px,pz)),1);
   for (const c of critters) if (c.active && c.g.visible){ const p=c.g.position; put(p.x,0,p.z,c.kind==='elf'?0.7:c.kind==='moose'?1.6:1.2,c.kind==='elf'?0.7:2.4,c.g.rotation.y,0,0.9); }
   if (yeti.active && yeti.g.visible){ const p=yeti.g.position; put(p.x,0,p.z,1.8,1.8,0,0,1); }
-  if (team.on && team.list) for (const c of team.list) if (c.g.visible){ const p=c.g.getWorldPosition(_bp.clone()); put(p.x,0,p.z,1.1,2.2,heading,Math.max(0,p.y-gH(p.x,p.z)),0.9); }
+  if (team.on && team.list) for (const c of team.list) if (c.g.visible){ const p=c.g.getWorldPosition(_bw); put(p.x,0,p.z,1.1,2.2,heading,Math.max(0,p.y-gH(p.x,p.z)),0.9); }
   BLOBS.count=n; BLOBS.instanceMatrix.needsUpdate=true; if (BLOBS.instanceColor) BLOBS.instanceColor.needsUpdate=true; }
 async function enterVR(){
   if (!navigator.xr){ toast('VR needs a headset browser, like the Meta Quest Browser'); return; }
@@ -3896,7 +3908,7 @@ async function enterVR(){
       BLOBS.visible=false; STREAK.m.visible=false; CARD.m.visible=false; XR.face.m.visible=false; XR.face.k=0; qi=XR.prevQi; applyConditions(condNow); applyQuality(true); if (state==='play'||state==='crash') togglePause(); });
     initAudio(); if (state==='title'||state==='over') startGame();
     vrWarm();
-    setTimeout(()=>xrMsg((VRA.auto?'Auto detail · ':'')+QUALITY[qi].name+' · left stick changes'),1500);
+    setTimeout(()=>xrMsg('Click the left stick to pause'),1500);
   } catch(e){ XR.on=false; console.error(e); toast("Couldn't start VR here. Open the game's web link in the Meta Quest Browser."); }
 }
 let frameErrs=0;

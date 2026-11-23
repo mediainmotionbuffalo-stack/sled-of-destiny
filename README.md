@@ -31,15 +31,15 @@ Open the play link in the Meta Quest Browser, set up your rider, and press **�
 
 | Control | Action |
 | --- | --- |
-| Either thumbstick | Steer |
-| Right trigger | Tuck |
-| Left trigger | Brake |
-| A | Hop (and ride again after a crash-out) |
-| Hold grip + thumbstick in the air | Spins (left/right) and flips (forward/back) |
-| Click right thumbstick | Lean-to-steer on/off (off by default) |
-| X | Goggles (when paused: view mode Full feel, Medium or High; Full feel moves and shakes like the computer camera, High keeps your view level) |
-| Y | Pause |
-| B (when paused or after a run) | Leave VR |
-| Click left thumbstick | VR graphics: Auto (default, tunes itself to your headset), then Fast, Balanced or Detailed |
+| Left thumbstick | Steer |
+| Right thumbstick (in the air) | Spins (left/right) and flips (forward/back) |
+| Either trigger, or X | Trick button: hold with the right stick on the ground to spin a saucer or tube |
+| Right grip | Tuck for speed |
+| Left grip | Brake |
+| A | Jump (and ride again after a crash-out) |
+| B | Goggles (when paused: leave VR) |
+| Y (hold) | Look back |
+| Click left thumbstick | Pause and resume |
+| While paused | X: view mode (Full feel, Medium, High) · A: graphics level · click right stick: lean-to-steer |
 
 Your coins, sleds, upgrades and best-run ghost are saved in your own browser.
