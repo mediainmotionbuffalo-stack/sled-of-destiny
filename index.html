@@ -234,6 +234,10 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
 @media (max-width:640px){.stats{grid-template-columns:repeat(3,1fr)} #keys{display:none}}
 @media (max-height:640px){.controls{display:none} h1{font-size:3.2rem}}
 @media (max-height:760px){.screen:not(.center) .lede{display:none} .chip{padding:5px 10px;font-size:.86rem} .chip small{display:none} .card{gap:10px}}
+  .vrhome{display:flex;flex-direction:column;align-items:flex-start;gap:12px;margin:8px 0 18px}
+  .vrhome .vrtag{margin:0;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.8rem;opacity:.85}
+  .vrhome .vrgo{font-size:1.5rem;padding:18px 34px}
+  body.vrfirst #steps, body.vrfirst .step, body.vrfirst .row.nav{display:none!important}
 </style>
 
 <div id="app">
@@ -280,6 +284,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
       <h1>Sled of Destiny</h1>
       <p class="lede">Ride an endless mountain through pine forest, alpine bowls, frozen rivers and the odd village. Chain tricks for points, outrun avalanches and the yeti, and unlock faster, wilder sleds.</p>
       <div class="racebox" id="raceBox" hidden><b id="raceTitle"></b><p id="raceInfo"></p><div class="row"><button class="btn" id="raceGo">Race now ▶</button><button class="btn ghost small" id="raceLeave">Not now</button></div></div>
+      <div class="vrhome" id="vrHome" hidden><p class="vrtag">🥽 Headset detected</p><button class="btn vrgo" id="vrGo">Ride in VR</button><p class="hint">You'll pick your rider, conditions and sled inside the headset.</p><button class="btn ghost small" id="flatGo">Play on this screen instead</button></div>
       <ol class="steps" id="steps" aria-label="Setup steps"><li data-s="0"><b>1</b>Rider</li><li data-s="1"><b>2</b>Conditions</li><li data-s="2"><b>3</b>Sled</li></ol>
       <div class="step" id="step0">
         <div class="pickrow inline"><span class="label">Rider</span><div class="pick" id="genderPick" role="group" aria-label="Boy or girl"></div></div>
@@ -392,11 +397,12 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 function mulberry(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 function hash3(x,y,z){ const s=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453; return s-Math.floor(s); }
 const angDiff=(a,b)=>{ let d=a-b; while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI; return d; };
+const HAD_SETTINGS=(()=>{ try{ return !!localStorage.getItem('sledSettings'); }catch(e){ return false; } })();
 const SETTINGS=Object.assign({vrCF:0,vrLean:false,vol:1,music:0.8,fov:70,shake:true,chase:false,ghost:true,warn:'off',touch:'auto',goggles:false},(()=>{ try{ return JSON.parse(localStorage.getItem('sledSettings')||'{}'); }catch(e){ return {}; } })());
 if (!SETTINGS.warnV){ SETTINGS.warn='off'; SETTINGS.warnV=1; }
 if (SETTINGS.vrComfort===true){ SETTINGS.vrCF=2; delete SETTINGS.vrComfort; }
 if ((SETTINGS.vrV||0)<2){ SETTINGS.vrV=2; SETTINGS.vrLean=false; }
-if (SETTINGS.vrV<3){ SETTINGS.vrV=3; SETTINGS.vrCF=0; }   // headset default: the same view and feel as the computer
+if (SETTINGS.vrV<3){ SETTINGS.vrV=3; SETTINGS.vrCF=HAD_SETTINGS?0:1; }   // returning riders keep Full feel; new riders start on the gentler Medium view
 const CF_NAME=['Full feel','Medium','High'];
 function saveSettings(){ try{ localStorage.setItem('sledSettings',JSON.stringify(SETTINGS)); }catch(e){} }
 const prefersCalm=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2896,7 +2902,7 @@ function paintSplat(k){ const c=$('dump'), w=Math.max(2,Math.round(innerWidth*0.
       g.fillStyle=`rgba(${Math.round(rr(235,255))},${Math.round(rr(240,255))},255,${rr(0.6,0.95).toFixed(2)})`; g.beginPath(); g.arc(gx,gy,gs,0,6.28); g.fill(); }
     for (let j=0;j<6;j++){ const a=R()*6.28, d=R()*Rr*0.8; g.fillStyle='rgba(255,255,255,.95)'; g.fillRect(x+Math.cos(a)*d,y+Math.sin(a)*d,1.5,1.5); } }
 }
-function faceSnow(k){ if (typeof XR!=='undefined' && XR.on && XR.face){ XR.face.k=Math.max(XR.face.k,k); XR.face.re=true; } paintSplat(k); const el=$('dump'); el.style.transition='none'; el.style.opacity='1'; el.style.transform='translateY(0)';
+function faceSnow(k){ if (typeof XR!=='undefined' && XR.on && XR.face && SETTINGS.vrCF<2){ XR.face.k=Math.max(XR.face.k,k); XR.face.re=true; } paintSplat(k); const el=$('dump'); el.style.transition='none'; el.style.opacity='1'; el.style.transform='translateY(0)';
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ el.style.transition='opacity 2.2s ease-in 0.5s, transform 2.8s ease-in 0.3s'; el.style.opacity='0'; el.style.transform='translateY(5%)'; }));
   const fx=Math.sin(camYaw), fz=Math.cos(camYaw); for(let i=0;i<Math.round(60*k);i++) emit(px+fx*rr(0.4,1.6)+rr(-0.8,0.8),py+rr(0.8,1.6),pz+fz*rr(0.4,1.6)+rr(-0.8,0.8),vx*0.92,0.6,vz*0.92,1,0.5,{size:[0.04,0.1],life:[0.3,0.6],g:3,drag:2});
   for(let i=0;i<Math.round(40*k);i++) emitChunk(px+fx*rr(0.3,1.2)+rr(-0.6,0.6),py+rr(0.7,1.3),pz+fz*rr(0.3,1.2)+rr(-0.6,0.6),vx*0.93,rr(0,1.5),vz*0.93,1,0.6,[0.015,0.04]); }
@@ -3440,7 +3446,7 @@ function updateDress(dt){ if (!dressOn||!DRESS.flames||!DRESS.fig) return; dress
 
 /* ---------------- setup: 1 rider, 2 conditions, 3 sled ---------------- */
 let titleStep=0;
-function riderCfg(){ const d={g:'boy',hat:0,jacket:0,pants:0,boots:0,mitts:0}; prog.rider=Object.assign(d,prog.rider||{}); return prog.rider; }
+function riderCfg(){ const d={g:'boy',hat:0,jacket:0,pants:0,boots:0,mitts:0}; if (!prog.rider||typeof prog.rider!=='object') prog.rider={}; for (const k in d) if (prog.rider[k]===undefined) prog.rider[k]=d[k]; return prog.rider; }   // always the same object, so a pick never lands on a stale copy
 function applyOutfit(){ const r=riderCfg(); if (!RM.jacket) return;
   const J=GEAR.jacket[r.jacket]; RM.jacket.map=J.plaid?PLAID:RM.jkMap; RM.jacket.color.set(J.plaid?'#ffffff':J.c); RM.jacket.needsUpdate=true;
   RM.pants.color.set(GEAR.pants[r.pants].c); RM.boots.color.set(GEAR.boots[r.boots].c);
@@ -3509,7 +3515,8 @@ $('gogBtn').addEventListener('click',e=>{ setGoggles(!SETTINGS.goggles); e.curre
 $('menuBtn').addEventListener('click',()=>{ backToTitle(); initAudio(); });
 $('raceGo').addEventListener('click',()=>{ startGame(); }); $('raceLeave').addEventListener('click',leaveRace);
 $('raceShareBtn').addEventListener('click',shareRace); $('raceName').addEventListener('input',e=>{ prog.name=e.target.value.trim(); saveProg(); });
-$('vrBtn').addEventListener('click',enterVR); $('vrBtn2').addEventListener('click',enterVR);
+$('vrBtn').addEventListener('click',enterVR); $('vrBtn2').addEventListener('click',enterVR); $('vrGo').addEventListener('click',enterVR);
+$('flatGo').addEventListener('click',()=>{ document.body.classList.remove('vrfirst'); $('vrHome').hidden=true; setStep(0); });
 $('setBtn').addEventListener('click',openSettings); $('setBtn2').addEventListener('click',openSettings); $('setDone').addEventListener('click',closeSettings);
 $('garageBtn').addEventListener('click',openGarage); $('garageBtn2').addEventListener('click',openGarage); $('gDone').addEventListener('click',closeGarage);
 $('pauseMenuBtn').addEventListener('click',()=>{ recordRun(); clearHazards(); loseCombo(); backToTitle(); if (AC) AC.resume(); });
@@ -3538,7 +3545,7 @@ function updateHazardsAndZones(dt){
     const tier=mph>=65?3:mph>=52?2:mph>=40?1:0; if (tier>0&&tier>=spdTier){ spdHold+=dt; } else spdHold=0; if (tier!==spdTier){ spdTier=tier; spdHold=0; }
     if (spdTier>0 && spdHold>=4){ spdHold=0; comboAdd([0,250,500,900][spdTier],['', 'Speed run','Flying','Breakneck speed'][spdTier]); }
     spdTagOn=mph>30; }
-  if (playing) for (const f of FINISHES) if (!f.done && pz>f.z){ f.done=true; RUN.cps=(RUN.cps||0)+1; bankCombo(); const cb=Math.round((5000+1500*Math.min(6,RUN.cps))*SNOW.mult);   // checkpoints are rarer now, so each is worth more score+=cb; sfx('fanfare');
+  if (playing) for (const f of FINISHES) if (!f.done && pz>f.z){ f.done=true; RUN.cps=(RUN.cps||0)+1; bankCombo(); const cb=Math.round((5000+1500*Math.min(6,RUN.cps))*SNOW.mult); score+=cb; sfx('fanfare');   // checkpoints are rarer now, so each is worth more
     toast('<em>'+pick(['Great job!','Nice riding!','Checkpoint!','Keep it up!','Way to go!','Looking sharp!','Crushing it!'])+'</em> Checkpoint '+RUN.cps+' · +'+fmt(cb)+' · '+ZNAME[zoneAt(f.z+20)],true);
     for (let k=0;k<160;k++){ const a=R()*6.28; emit(px+Math.cos(a)*rr(1,6),py+rr(0.5,5),pz+rr(0,8),Math.cos(a)*rr(1,4)+vx*0.5,rr(1,5),vz*0.6,1,0.5,{size:[0.06,0.2],life:[1,2],g:1.2,drag:1,kind:1}); } }
   if (playing && comboMult>0){ if (onGround) comboT-=dt; if (comboT<=0) bankCombo(); $('cBar').style.width=clamp(comboT/5,0,1)*100+'%'; }
@@ -3663,7 +3670,7 @@ function chaseCam(dt){
   const room=state==='title'&&titleStep===0&&$('garage').hidden&&$('settings').hidden;
   if (room&&!DRESS.failed){ buildDress(); }
   if (room&&DRESS.ok){ DRESS.g.visible=true; dressOn=true; rig.visible=false; avatar.visible=false; if (rig.parent!==camera){ camera.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
-    const P=DRESS.pos, wide=innerWidth>760; camera.position.set(P.x+(wide?-0.1:0.9),P.y+1.45,P.z+4.4); camera.lookAt(P.x+(wide?-0.7:1.0),P.y+1.08,P.z); camera.fov=wide?40:50; camera.updateProjectionMatrix(); chOn=false; return; }
+    const P=DRESS.pos, wide=innerWidth>760&&!XR.on; camera.position.set(P.x+(wide?-0.1:0.9),P.y+1.45,P.z+(XR.on?3.0:4.4)); camera.lookAt(P.x+(wide?-0.7:1.0),P.y+1.08,P.z); camera.fov=wide?40:50; camera.updateProjectionMatrix(); chOn=false; return; }
   if (dressOn){ dressOn=false; DRESS.g.visible=false; }
   const dress=false;
   const want=dress||(SETTINGS.chase&&(state==='play'||state==='crash'));
@@ -3748,33 +3755,34 @@ const XR={vp:0,vr:0,guardT:-6,guardN:0,on:false,session:null,dolly:new T.Group()
 scene.add(XR.dolly); renderer.xr.enabled=true; renderer.xr.setReferenceSpaceType('local');
 (function buildXRBits(){
   const c=canvas(512,256); XR.hudC=c; const t=tex(c,true,false); t.minFilter=T.LinearFilter;
-  XR.hud=new T.Mesh(new T.PlaneGeometry(0.44,0.22),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false})); XR.hud.renderOrder=999; XR.hud.visible=false;
+  XR.hud=new T.Mesh(new T.PlaneGeometry(0.44,0.22),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,toneMapped:false,fog:false})); XR.hud.renderOrder=999; XR.hud.visible=false;
   const vc=canvas(256,256), g=vc.getContext('2d'), gr=g.createRadialGradient(128,128,40,128,128,128); gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(0.55,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,1)'); g.fillStyle=gr; g.fillRect(0,0,256,256);
   XR.vig=new T.Mesh(new T.PlaneGeometry(0.5,0.5),new T.MeshBasicMaterial({map:tex(vc,false,false),transparent:true,opacity:0,depthTest:false,depthWrite:false})); XR.vig.position.z=-0.12; XR.vig.renderOrder=1000; XR.vig.visible=false; camera.add(XR.vig);
 })();
 // rumble in the controllers: landings by how hard you hit, crashes, close calls, a light buzz over rough snow
 function vrBuzz(v,ms,side){ const ses=XR.session; if (!ses) return; for (const src of ses.inputSources){ if (side&&src.handedness!==side) continue; const h=src.gamepad&&src.gamepad.hapticActuators&&src.gamepad.hapticActuators[0]; if (h&&h.pulse) try{ h.pulse(clamp(v,0,1),ms); }catch(e){} } }
 // trick scores and landing calls float up out in front of you instead of sitting on the dashboard
-const XF=(()=>{ const c=canvas(1024,192), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.1,0.2),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0})); m.renderOrder=998; m.visible=false; XR.dolly.add(m); return {c,t,m,life:0}; })();
+const XF=(()=>{ const c=canvas(1024,192), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.1,0.2),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0,toneMapped:false,fog:false})); m.renderOrder=998; m.visible=false; XR.dolly.add(m); return {c,t,m,life:0}; })();
 function xrFloat(html,life){ const txt=String(html).replace(/<[^>]+>/g,''), em=(String(html).match(/<em>(.*?)<\/em>/)||[])[1], g=XF.c.getContext('2d'); g.clearRect(0,0,1024,192);
-  g.textAlign='center'; g.textBaseline='middle'; g.font='800 84px "Barlow Condensed", Arial, sans-serif'; g.lineWidth=10; g.strokeStyle='rgba(10,16,24,0.75)'; g.strokeText(txt.slice(0,30),512,96);
-  g.fillStyle=em&&txt.indexOf(em)===0?'#ffc35a':'#ffffff'; g.fillText(txt.slice(0,30),512,96); XF.t.needsUpdate=true; XF.life=XF.max=life||1.8; XF.m.visible=true; }
+  g.textAlign='center'; g.textBaseline='middle'; g.font='800 84px "Barlow Condensed", Arial, sans-serif'; const pw=Math.min(1010,g.measureText(txt.slice(0,30)).width+100); g.fillStyle=UIC.bg; rrect(g,512-pw/2,20,pw,152,76); g.fill();
+  g.fillStyle=em&&txt.indexOf(em)===0?UIC.acc:UIC.fg; g.fillText(txt.slice(0,30),512,96); XF.t.needsUpdate=true; XF.life=XF.max=life||1.8; XF.m.visible=true; }
 function updateXF(dt){ if (XF.life<=0){ XF.m.visible=false; return; } XF.life-=dt; const k=1-XF.life/(XF.max||1.8); XF.m.position.set(0,0.5+k*0.25,-3); XF.m.material.opacity=0.9*Math.min(1,XF.life*2)*Math.min(1,k*8); }
 const STREAK=(()=>{ const N=140, g=new T.BufferGeometry(), p=new Float32Array(N*6); g.setAttribute('position',new T.BufferAttribute(p,3));
   const m=new T.LineSegments(g,new T.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false})); m.frustumCulled=false; m.visible=false; scene.add(m); return {N,g,p,m,pts:new Float32Array(N*3),init:false}; })();
 function updateStreaks(dt,sp){ const S=STREAK, P=S.pts, fx=Math.sin(heading), fz=Math.cos(heading), E=XR.E;   // specks of snow hanging in the air that whip past you at your real speed
-  const op=state==='play'?clamp((sp-7)/22,0,0.55):0; S.m.visible=op>0.01; S.m.material.opacity=op; if (!S.m.visible){ S.init=false; return; }
+  const op=state==='play'?clamp((sp-7)/22,0,0.55)*[1,0.45,0][SETTINGS.vrCF]:0;   // (fewer in the gentler views: rushing specks in your side vision are strong motion cues)
+  S.m.visible=op>0.01; S.m.material.opacity=op; if (!S.m.visible){ S.init=false; return; }
   const spawn=(i,ahead)=>{ const d=ahead?rr(10,32):rr(1,32), l=rr(-7,7); P[i*3]=E.x+fx*d+fz*l; P[i*3+1]=E.y+rr(-1.4,2.6); P[i*3+2]=E.z+fz*d-fx*l; };
   if (!S.init){ for (let i=0;i<S.N;i++) spawn(i,false); S.init=true; }
   const k=0.045; for (let i=0;i<S.N;i++){ const dx=P[i*3]-E.x, dz=P[i*3+2]-E.z, f=dx*fx+dz*fz; if (f<-1.5 || Math.abs(dx*fz-dz*fx)>9) spawn(i,true);
     const o=i*6; S.p[o]=P[i*3]; S.p[o+1]=P[i*3+1]; S.p[o+2]=P[i*3+2]; S.p[o+3]=P[i*3]+vx*k; S.p[o+4]=P[i*3+1]+vy*k; S.p[o+5]=P[i*3+2]+vz*k; }
   S.g.attributes.position.needsUpdate=true; }
 // the first few VR runs open with a big, simple controls card floating in front of you
-const CARD=(()=>{ const c=canvas(1024,620), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.24,0.75),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0})); m.renderOrder=997; m.visible=false; XR.dolly.add(m);
-  const g=c.getContext('2d'); g.fillStyle='rgba(12,20,30,0.86)'; g.beginPath(); g.roundRect?g.roundRect(0,0,1024,620,40):g.rect(0,0,1024,620); g.fill();
-  g.textAlign='left'; g.fillStyle='#ffc35a'; g.font='800 64px "Barlow Condensed", Arial, sans-serif'; g.fillText('HOW TO RIDE',60,100);
+const CARD=(()=>{ const c=canvas(1024,620), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.24,0.75),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0,toneMapped:false,fog:false})); m.renderOrder=997; m.visible=false; XR.dolly.add(m);
+  const g=c.getContext('2d'); g.fillStyle='rgba(9,15,23,0.95)'; g.beginPath(); g.roundRect?g.roundRect(0,0,1024,620,40):g.rect(0,0,1024,620); g.fill();
+  g.textAlign='left'; g.fillStyle='#ffd25e'; g.font='800 64px "Barlow Condensed", Arial, sans-serif'; g.fillText('HOW TO RIDE',60,100);
   const rows=[['Left stick','steer'],['Right grip','tuck for speed'],['Left grip','brake'],['A','jump'],['Right stick (in the air)','spin and flip'],['Y  ·  left-stick click','look back  ·  pause']];
-  rows.forEach(([a,b],k)=>{ g.font='700 40px Arial, sans-serif'; g.fillStyle='#ffffff'; g.fillText(a,60,180+k*70); g.fillStyle='#b9c6d2'; g.font='500 40px Arial, sans-serif'; g.fillText(b,640,180+k*70); }); t.needsUpdate=true;
+  rows.forEach(([a,b],k)=>{ g.font='700 40px Arial, sans-serif'; g.fillStyle='#ffffff'; g.fillText(a,60,180+k*70); g.fillStyle='#dbe4ee'; g.font='600 40px Arial, sans-serif'; g.fillText(b,640,180+k*70); }); t.needsUpdate=true;
   return {m,life:0}; })();
 function showCard(){ CARD.life=8; }
 // snow splattered on your goggles in the headset (big landings, powder, crashes), clearing from the middle out
@@ -3785,23 +3793,81 @@ function updateFace(dt){ const F=XR.face; if (F.m.parent!==camera) camera.add(F.
       gr.addColorStop(0,'rgba(250,252,255,0.95)'); gr.addColorStop(0.7,'rgba(235,242,250,0.7)'); gr.addColorStop(1,'rgba(235,242,250,0)'); g.fillStyle=gr; g.beginPath(); g.arc(x,y,s,0,6.283); g.fill(); } F.t.needsUpdate=true; }
   F.m.visible=true; F.m.material.opacity=Math.min(1,F.k*1.3); F.k-=dt*0.45; }
 function updateCard(dt){ if (CARD.life<=0){ CARD.m.visible=false; return; } CARD.life-=dt; CARD.m.visible=true; CARD.m.position.set(0,0.15,-1.5); CARD.m.material.opacity=Math.min(1,CARD.life*1.5); if (speedNow()>9 && CARD.life>1) CARD.life=1; }
-function xrMsg(html){ XR.msg=String(html).replace(/<[^>]+>/g,''); XR.msgT=2.2; }
+// ---------- headset screens: solid, high-contrast panels (not tone-mapped, so whites stay white) ----------
+const UIC={bg:'rgba(9,15,23,0.94)',edge:'rgba(255,255,255,0.22)',fg:'#ffffff',dim:'#dbe4ee',acc:'#ffd25e',sel:'#2a6fdb'};
+function rrect(g,x,y,w,h,r){ g.beginPath(); if (g.roundRect) g.roundRect(x,y,w,h,r); else g.rect(x,y,w,h); }
+function uiPanel(w,h,pw,ph,parent,order){ const c=canvas(w,h), t=tex(c,true,false); t.minFilter=T.LinearFilter; t.generateMipmaps=false;
+  const m=new T.Mesh(new T.PlaneGeometry(pw,ph),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,toneMapped:false,fog:false})); m.renderOrder=order||1000; m.visible=false; parent.add(m); return {c,t,m,g:c.getContext('2d')}; }
+// short messages ("Goggles on", "Checkpoint!") in a dark pill just below your line of sight
+const MSG=uiPanel(1024,160,0.9,0.14,XR.dolly,1001);
+function drawMsg(){ const {g}=MSG; g.clearRect(0,0,1024,160); g.font='700 58px Arial, sans-serif'; const w=Math.min(1000,g.measureText(XR.msg).width+90);
+  g.fillStyle=UIC.bg; rrect(g,512-w/2,14,w,132,66); g.fill(); g.strokeStyle=UIC.edge; g.lineWidth=3; g.stroke(); g.fillStyle=UIC.fg; g.textAlign='center'; g.textBaseline='middle'; g.fillText(XR.msg,512,82); MSG.t.needsUpdate=true; }
+// the big menu panel: pause, run over, and the ride setup (rider, conditions, sled) right in the headset
+const MENU=uiPanel(1024,800,1.15,0.9,XR.dolly,1002);
+const LOBBY={step:0,row:0,rep:0,steps:[
+  {title:'Rider',rows:[['Rider','genderPick'],['Outfit','outfitPick']]},
+  {title:'Conditions',rows:[['Difficulty','diffPick'],['Time of day','condPick'],['Snowfall','snowPick'],['Ground','surfPick'],['Theme','themePick']]},
+  {title:'Sled',rows:[['Sled','sledPick'],['View','vrView']]}]};
+function chipName(b){ return (b.childNodes[0]&&b.childNodes[0].nodeType===3?b.childNodes[0].textContent:b.textContent).replace('🔒','').trim(); }
+function lobbyRow(id){ if (id==='vrView') return {names:CF_NAME,cur:SETTINGS.vrCF}; const el=$(id); if (!el) return {names:['—'],cur:0};
+  const ch=[...el.querySelectorAll('button.chip')]; return {ch,names:ch.map(chipName),cur:Math.max(0,ch.findIndex(b=>b.getAttribute('aria-pressed')==='true'))}; }
+function lobbyChange(id,d){ if (id==='vrView'){ SETTINGS.vrCF=(SETTINGS.vrCF+d+3)%3; saveSettings(); return; }
+  const r=lobbyRow(id); if (!r.ch||!r.ch.length) return; for (let n=1;n<=r.ch.length;n++){ const b=r.ch[(r.cur+d*n+r.ch.length*4)%r.ch.length]; if (!b.classList.contains('locked')){ b.click(); break; } }
+  renderRider(); renderPickers(); }
+const VIEW_TIP=['Moves and shakes like the computer camera','Level view in tricks, softer motion · best for most','Steadiest: for anyone new to VR'];
+function drawMenu(){ const {g}=MENU; g.clearRect(0,0,1024,800); g.fillStyle=UIC.bg; rrect(g,6,6,1012,788,44); g.fill(); g.strokeStyle=UIC.edge; g.lineWidth=4; g.stroke();
+  g.textBaseline='middle'; const line=(k,a,y)=>{ g.textAlign='left'; g.font='800 40px Arial, sans-serif'; g.fillStyle=UIC.acc; g.fillText(k,70,y); g.font='600 40px Arial, sans-serif'; g.fillStyle=UIC.fg; g.fillText(a,420,y); };
+  if (XR.lobby){ const L=LOBBY, S=L.steps[L.step];
+    g.textAlign='left'; g.font='italic 800 50px "Barlow Condensed", Arial, sans-serif'; g.fillStyle=UIC.fg; g.fillText('SLED OF DESTINY',60,70);
+    L.steps.forEach((s,i)=>{ const x=60+i*300; g.fillStyle=i===L.step?UIC.acc:'rgba(255,255,255,0.14)'; rrect(g,x,112,280,64,32); g.fill(); g.fillStyle=i===L.step?'#1a1206':UIC.dim; g.font='800 34px Arial, sans-serif'; g.textAlign='center'; g.fillText((i+1)+'  '+s.title.toUpperCase(),x+140,145); });
+    S.rows.forEach(([label,id],i)=>{ const y=236+i*92, r=lobbyRow(id), on=i===L.row;
+      if (on){ g.fillStyle=UIC.sel; rrect(g,40,y-40,944,80,24); g.fill(); }
+      g.textAlign='left'; g.font='700 36px Arial, sans-serif'; g.fillStyle=on?UIC.fg:UIC.dim; g.fillText(label,70,y);
+      g.textAlign='center'; g.font='800 40px Arial, sans-serif'; g.fillStyle=UIC.fg; g.fillText((on?'‹   ':'')+(r.names[r.cur]||'')+(on?'   ›':''),680,y); });
+    g.textAlign='left'; g.font='500 30px Arial, sans-serif'; g.fillStyle=UIC.dim;
+    const note=L.step===2?(S.rows[L.row][1]==='vrView'?VIEW_TIP[SETTINGS.vrCF]:SLED.blurb):L.step===1?($('diffInfo')?$('diffInfo').textContent:''):'Your rider is by the fire →';
+    wrapText(g,note,70,L.step===2?440:L.step===1?700:440,880,38);
+    g.fillStyle='rgba(255,255,255,0.12)'; rrect(g,40,712,944,62,31); g.fill(); g.textAlign='center'; g.font='700 32px Arial, sans-serif'; g.fillStyle=UIC.fg;
+    g.fillText('Left stick ↑↓ pick · ←→ change · A '+(L.step===2?'RIDE!':'next')+' · B '+(L.step?'back':'leave VR'),512,743); }
+  else if (state==='over'){ g.textAlign='center'; g.font='italic 800 72px "Barlow Condensed", Arial, sans-serif'; g.fillStyle=UIC.fg; g.fillText('RUN OVER',512,96);
+    g.font='700 42px Arial, sans-serif'; g.fillStyle=UIC.acc; g.fillText(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft  ·  score '+fmt(score),512,180);
+    if (lastEarned){ g.font='600 36px Arial, sans-serif'; g.fillStyle=UIC.dim; g.fillText('+'+fmt(lastEarned)+' coins',512,236); }
+    line('A','Ride again',360); line('X','Change sled & conditions',450); line('B','Leave VR',540); }
+  else { g.textAlign='center'; g.font='italic 800 72px "Barlow Condensed", Arial, sans-serif'; g.fillStyle=UIC.fg; g.fillText('PAUSED',512,96);
+    line('Left stick','Click to keep riding',240); line('X','View: '+CF_NAME[SETTINGS.vrCF],330); line('A','Graphics: '+(VRA.auto?'Auto':QUALITY[qi].name.replace('VR ','')),420);
+    line('Right stick','Click: lean steer '+(SETTINGS.vrLean?'on':'off'),510); line('B','Leave VR',600);
+    g.textAlign='center'; g.font='500 30px Arial, sans-serif'; g.fillStyle=UIC.dim; g.fillText(VIEW_TIP[SETTINGS.vrCF],512,710); }
+  MENU.t.needsUpdate=true; }
+function wrapText(g,t,x,y,w,lh){ const words=String(t||'').split(' '); let ln='', yy=y; for (const wd of words){ const tst=ln?ln+' '+wd:wd; if (g.measureText(tst).width>w && ln){ g.fillText(ln,x,yy); ln=wd; yy+=lh; if (yy>y+lh*2) return; } else ln=tst; } if (ln) g.fillText(ln,x,yy); }
+function lobbyInput(gpL,gpR,pressed,dt){ const L=LOBBY, S=L.steps[L.step], ax=gpL?gpL.axes[2]||0:0, ay=gpL?gpL.axes[3]||0:0, b=(gp,i)=>!!(gp&&gp.buttons[i]&&gp.buttons[i].pressed);
+  L.rep-=dt; const dir=Math.abs(ay)>0.6?Math.sign(ay):0, dx=Math.abs(ax)>0.6?Math.sign(ax):0;
+  if ((dir||dx) && L.rep<=0){ L.rep=L.held?0.22:0.4; L.held=true; if (dir) L.row=clamp(L.row+dir,0,S.rows.length-1); if (dx) lobbyChange(S.rows[L.row][1],dx); XR.menuDirty=true; vrBuzz(0.08,15,'left'); }
+  if (!dir&&!dx){ L.held=false; L.rep=0; }
+  if (pressed('A',b(gpR,4))){ vrBuzz(0.2,25,'right'); if (L.step<2){ L.step++; L.row=0; } else lobbyRide(); XR.menuDirty=true; }
+  if (pressed('B',b(gpR,5))){ if (L.step>0){ L.step--; L.row=0; XR.menuDirty=true; } else XR.session&&XR.session.end(); } }
+function openLobby(){ XR.lobby=true; LOBBY.step=0; LOBBY.row=0; if (state!=='title') backToTitle(); titleStep=0; renderRider(); renderPickers(); XR.recenter=true; XR.menuDirty=true; blink(); }
+function lobbyRide(){ XR.lobby=false; blink(); initAudio(); startGame(); vrWarm(); }
+// a quick blink to black hides sudden jumps (new run, crash, look back): your eyes never see the world teleport
+function blink(){ XR.fadeV=1; }
+const FADE=(()=>{ const m=new T.Mesh(new T.PlaneGeometry(0.6,0.6),new T.MeshBasicMaterial({color:0,transparent:true,opacity:0,depthTest:false,depthWrite:false,toneMapped:false,fog:false})); m.renderOrder=1010; m.position.z=-0.1; m.visible=false; return m; })();
+function updateUI(dt){ if (FADE.parent!==camera) camera.add(FADE); XR.fadeV=Math.max(0,(XR.fadeV||0)-dt*3.2); FADE.visible=XR.fadeV>0.01; FADE.material.opacity=Math.min(1,XR.fadeV*1.4);
+  const menuOn=XR.lobby||state==='pause'||state==='over'; MENU.m.visible=menuOn; if (menuOn){ CARD.m.visible=false; XF.m.visible=false; }
+  if (menuOn){ if (XR.lobby){ MENU.m.position.set(-0.45,0.02,-1.25); MENU.m.rotation.set(0,0.42,0); } else { MENU.m.position.set(0,0,-1.25); MENU.m.rotation.set(0,0,0); }
+    XR.menuT=(XR.menuT||0)-dt; if (XR.menuDirty||XR.menuT<=0){ XR.menuDirty=false; XR.menuT=0.3; drawMenu(); } }
+  XR.msgT-=dt; MSG.m.visible=XR.msgT>0 && !menuOn; if (MSG.m.visible){ MSG.m.position.set(0,-0.36,-1.4); MSG.m.material.opacity=Math.min(1,XR.msgT*2); if (XR.msgDirty){ XR.msgDirty=false; drawMsg(); } } }
+function xrMsg(html){ XR.msg=String(html).replace(/<[^>]+>/g,'').slice(0,40); XR.msgT=2.4; XR.msgDirty=true; }
 function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512,256);
-  const panel=(y,h)=>{ g.fillStyle='rgba(13,20,28,0.62)'; g.beginPath(); g.roundRect?g.roundRect(8,y,496,h,22):g.rect(8,y,496,h); g.fill(); };
-  g.textBaseline='middle'; g.fillStyle='#f4f7fa';
-  if (state==='over'||state==='pause'){ panel(8,240); g.textAlign='center';
-    g.font='800 44px "Barlow Condensed", Arial, sans-serif'; g.fillText(state==='over'?'RUN OVER':'PAUSED',256,46);
-    g.font='600 26px Arial, sans-serif'; g.fillText(state==='over'?(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft · score '+fmt(score)+(lastEarned?' · +'+fmt(lastEarned)+' coins':'')):'',256,96);
-    g.fillStyle='#ffc35a'; g.font='700 26px Arial, sans-serif'; g.fillText(state==='over'?'A: ride again':'Click left stick: keep riding',256,140); g.fillStyle='#f4f7fa'; g.fillText('B: leave VR',256,176); g.font='600 19px Arial, sans-serif'; g.fillStyle='#c9d3dc'; g.fillText('X: view '+CF_NAME[SETTINGS.vrCF]+(state==='pause'?' · A: graphics '+(VRA.auto?'Auto':QUALITY[qi].name.replace('VR ','')):''),256,210); g.fillText('Click right stick: lean steer '+(SETTINGS.vrLean?'on':'off'),256,236);
-  } else { panel(132,116); g.textAlign='left';
-    g.font='800 64px "Barlow Condensed", Arial, sans-serif'; g.fillText(Math.round(speedNow()*2.237)+'',30,192); g.font='600 22px Arial, sans-serif'; g.fillText('mph',30+g.measureText('000').width*1.9,204);
-    g.textAlign='right'; g.font='700 30px Arial, sans-serif'; g.fillText(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft',486,166); g.font='600 22px Arial, sans-serif'; g.fillStyle='#c9d3dc';
-    g.fillText('score '+fmt(score)+' · '+'●'.repeat(Math.max(0,DIFF.lives-crashes))+'○'.repeat(Math.min(DIFF.lives,crashes)),486,206); g.fillText(ZNAME[zoneAt(pz)]+(SETTINGS.goggles?' · goggles':''),486,234);
-    if (XR.msgT>0){ panel(18,92); g.textAlign='center'; g.fillStyle='#f4f7fa'; g.font='700 30px Arial, sans-serif'; g.fillText(XR.msg.slice(0,34),256,64); } }
+  g.fillStyle=UIC.bg; rrect(g,6,70,500,180,26); g.fill(); g.strokeStyle=UIC.edge; g.lineWidth=3; g.stroke(); g.textBaseline='middle';
+  g.textAlign='left'; g.fillStyle=UIC.fg; g.font='800 92px "Barlow Condensed", Arial, sans-serif'; const mph=Math.round(speedNow()*2.237)+''; g.fillText(mph,28,150);
+  g.font='700 26px Arial, sans-serif'; g.fillStyle=UIC.dim; g.fillText('mph',34+g.measureText(mph).width*2.05,170);
+  g.textAlign='right'; g.font='800 38px Arial, sans-serif'; g.fillStyle=UIC.acc; g.fillText(fmt(Math.round(Math.max(0,(pz-startZ)*3.281)))+' ft',488,112);
+  g.font='700 28px Arial, sans-serif'; g.fillStyle=UIC.fg; g.fillText(fmt(score)+' pts  '+'●'.repeat(Math.max(0,DIFF.lives-crashes))+'○'.repeat(Math.min(DIFF.lives,crashes)),488,166);
+  g.font='600 24px Arial, sans-serif'; g.fillStyle=UIC.dim; g.fillText(ZNAME[zoneAt(pz)]+(SETTINGS.goggles?' · goggles':''),488,214);
   XR.hud.material.map.needsUpdate=true; }
 // Controller layout. Right hand: grip tuck, trigger trick, A jump, B goggles, stick = tricks.
 // Left hand: grip brake, trigger trick, X trick, Y look back, stick = steer. Click the left stick to pause.
 function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)=>{ const was=XR.btnWas[id]; XR.btnWas[id]=on; return on&&!was; };
+  if (XR.lobby){ let gL=null, gR=null; for (const src of ses.inputSources){ if (!src.gamepad) continue; if (src.handedness==='left') gL=src.gamepad; else gR=src.gamepad; } lobbyInput(gL,gR,pressed,XR.pdt||0.014); return; }
   const dz=(v,d)=>Math.abs(v)<d?0:Math.sign(v)*(Math.abs(v)-d)/(1-d);   // a resting thumb never counts as input
   let tx=0, ty=0, trickBtn=false; const paused=state==='pause'||state==='over';
   for (const src of ses.inputSources){ const gp=src.gamepad; if (!gp) continue; const L=src.handedness==='left', ax=gp.axes[2]||0, ay=gp.axes[3]||0, b=i=>!!gp.buttons[i]?.pressed;
@@ -3809,20 +3875,24 @@ function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)
       if (Math.abs(ax)>0.2) padSteer=clamp(dz(ax,0.2)*1.3,-1,1);   // steering: full lock a little before the rim, like holding an arrow key
       if (b(1)) padBrake=true; if (b(0)||b(4)) trickBtn=true; if (b(5)) padLook=true;
       if (pressed('LS',b(3))) togglePause();
-      if (pressed('X',b(4)) && paused){ SETTINGS.vrCF=(SETTINGS.vrCF+1)%3; saveSettings(); xrMsg('View: '+CF_NAME[SETTINGS.vrCF]); XR.hudT=0; } }
+      if (pressed('X',b(4))){ if (state==='over') openLobby(); else if (state==='pause'){ SETTINGS.vrCF=(SETTINGS.vrCF+1)%3; saveSettings(); XR.menuDirty=true; } } }
     else {
       tx=dz(ax,0.25); ty=dz(ay,0.25);
       if (b(1)) padTuck=true; if (b(0)) trickBtn=true;
-      const a=pressed('A',b(4)); if (a){ if (state==='play'){ hopReq=0.15; vrBuzz(0.18,22,'right'); } else if (state==='over') startGame(); else if (state==='pause') cycleVRLevel(); }
+      const a=pressed('A',b(4)); if (a){ if (state==='play'){ hopReq=0.15; vrBuzz(0.18,22,'right'); } else if (state==='over') startGame(); else if (state==='pause'){ cycleVRLevel(); XR.menuDirty=true; } }
       if (pressed('B',b(5))){ if (paused) ses.end(); else setGoggles(!SETTINGS.goggles); }
-      if (pressed('RS',b(3)) && paused){ SETTINGS.vrLean=!SETTINGS.vrLean; saveSettings(); XR.leanInit=false; xrMsg(SETTINGS.vrLean?'Lean to steer: on':'Lean to steer: off'); XR.hudT=0; } } }
+      if (pressed('RS',b(3)) && paused){ SETTINGS.vrLean=!SETTINGS.vrLean; saveSettings(); XR.leanInit=false; XR.menuDirty=true; } } }
   // tricks: in the air the right stick does them by itself (a trick button works too); on the ground a trick button + right stick spins a saucer or tube
   const air=state==='play'&&!onGround&&time-airStart>0.12, stick=Math.abs(tx)>0||Math.abs(ty)>0;   // (not on the tiny hops over bumps)
   if (trickBtn || (air&&stick)){ padTrick=true; if (stick){ padSteer=clamp(tx*1.3,-1,1); padPitch=clamp(ty*1.3,-1,1); } else if (air){ padSteer=0; } }
   if (SETTINGS.vrLean && state==='play' && onGround && XR.lean && !padTrick) padSteer=clamp(padSteer+XR.lean,-1,1); }   // lean your body into the turn (adds to the stick)
 function xrPre(dt){ // the sled carries the dolly; the headset adds your own head movement on top
   XR.E.copy(camera.position); XR.Q.copy(camera.quaternion);
-  const air=state==='play'&&!onGround, full=SETTINGS.vrCF<2, DO=DECK_OFF[SLED.form], cf=[0.35,1,1.45][SETTINGS.vrCF];
+  if (XR.lobby){ // setting up by the chalet fire: stand where the menu camera stands, facing your rider
+    const P=DRESS.pos, fy=Math.atan2(-(P.x+1.0-XR.E.x),-(P.z-XR.E.z)); XR.dolly.rotation.set(0,fy-(XR.c?XR.c.yaw:0),0,'YXZ');   // face the rider by the fire
+    XR.dolly.position.copy(XR.E); if (XR.c) XR.dolly.position.sub(_xc.set(XR.c.x,XR.c.y,XR.c.z).applyQuaternion(XR.dolly.quaternion));
+    XR.hud.visible=false; XR.vig.visible=false; STREAK.m.visible=false; CARD.m.visible=false; rig.visible=false; updateUI(dt); camera.position.set(0,0,0); camera.quaternion.identity(); camera.updateMatrixWorld(true); return; }
+  const air=state==='play'&&!onGround, full=SETTINGS.vrCF===0, DO=DECK_OFF[SLED.form], cf=[0.35,0.8,1.4][SETTINGS.vrCF];
   // comfort: smooth out the small, fast up-and-down jiggle from bumps (your inner ear hates that most); big moves still come straight through
   if (!XR.syOk || Math.abs(XR.E.y-XR.sy)>1.5) XR.sy=XR.E.y; XR.sy+=(XR.E.y-XR.sy)*(SETTINGS.vrCF===0?1:Math.min(1,dt*(air?20:11))); XR.sy=clamp(XR.sy,XR.E.y-0.06,XR.E.y+0.06); XR.syOk=true;
   const EP=_xe.set(XR.E.x,XR.sy,XR.E.z);
@@ -3830,19 +3900,19 @@ function xrPre(dt){ // the sled carries the dolly; the headset adds your own hea
   // your view rides the sled through spins, flips and tilts in the air just like on the computer (on the ground it stays level for comfort)
   const ff=SETTINGS.vrCF===0, tp=(air&&full?flipOff:0)+(ff?camPitch-tuckAmt*0.06+DO[2]:0), tr=(air&&full)||ff?camRoll:0, k=Math.min(1,dt*(air?16:ff?12:8));   // Full feel: you look along the sled like the computer camera
   XR.vp-=Math.round((XR.vp-tp)/TAU)*TAU; XR.vp+=(tp-XR.vp)*k; XR.vr+=(tr-XR.vr)*k;
-  XR.dolly.rotation.set(XR.vp,(full?yawB:camYaw+groundSpin+Math.PI)-(XR.c?XR.c.yaw:0)+lookAmt*Math.PI*0.95,XR.vr,'YXZ');   // Y: look back over your shoulder
+  const lk=SETTINGS.vrCF===0?lookAmt:(XR.lookS||0); if (SETTINGS.vrCF>0){ const want=lookIn()&&(state==='play'||state==='crash')?1:0; if (want!==(XR.lookS||0)){ XR.lookS=want; blink(); } }   // gentler views: look back with a quick blink instead of a swing
+  XR.dolly.rotation.set(XR.vp,(full?yawB:camYaw+groundSpin+Math.PI)-(XR.c?XR.c.yaw:0)+lk*Math.PI*0.95,XR.vr,'YXZ');   // Y: look back over your shoulder
   XR.dolly.position.copy(EP); if (XR.c) XR.dolly.position.sub(_xc.set(XR.c.x,XR.c.y,XR.c.z).applyQuaternion(XR.dolly.quaternion));
   if (rig.parent!==fpAnchor){ fpAnchor.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
   fpAnchor.position.copy(EP); fpAnchor.rotation.set(pitchB,yawB,rollB,'YXZ'); rig.visible=state!=='crash';
-  if (XR.hud.parent!==fpAnchor) fpAnchor.add(XR.hud); XR.hud.position.set(-0.34,-0.44,-0.56); XR.hud.rotation.set(-0.6,0.45,0.12); XR.hud.visible=true;
-  if (state==='over'||state==='pause'){ XR.hud.position.set(0,0.02,-0.9); XR.hud.rotation.set(0,0,0); XR.hud.scale.setScalar(1.6); } else XR.hud.scale.setScalar(1);
-  XR.msgT-=dt; XR.hudT-=dt; if (XR.hudT<=0){ XR.hudT=0.15; drawXRHud(); }
+  if (XR.hud.parent!==fpAnchor) fpAnchor.add(XR.hud); XR.hud.position.set(-0.34,-0.44,-0.56); XR.hud.rotation.set(-0.6,0.45,0.12); XR.hud.scale.setScalar(1); XR.hud.visible=state==='play'||state==='crash';
+  XR.hudT-=dt; if (XR.hudT<=0 && XR.hud.visible){ XR.hudT=0.15; drawXRHud(); }
   // comfort edges: the view narrows softly when the motion your eyes see is strongest (speed, turning, tricks, drops) and opens back up when it calms
   const sp=speedNow(), yr=Math.abs(angDiff(camYaw+groundSpin,XR.lastYaw??camYaw))/Math.max(dt,1e-3); XR.lastYaw=camYaw+groundSpin; XR.yr=(XR.yr||0)+(yr-(XR.yr||0))*Math.min(1,dt*6);
   const fall=air?clamp(-vy/14,0,1):0, trick=air&&full?clamp((Math.abs(spinRate)+Math.abs(flipRate))/10,0,1):0;
   let vg=state==='play'?(clamp((sp-18)/40,0,0.25)+clamp((XR.yr-1.1)/2.5,0,0.3)+fall*0.15+trick*0.35)*cf:state==='crash'?0.7:0;
   XR.vg=(XR.vg||0)+(Math.min(0.88,vg)-(XR.vg||0))*Math.min(1,dt*(vg>(XR.vg||0)?7:2.5)); XR.vig.visible=true; XR.vig.material.opacity=XR.vg;
-  updateXF(dt); updateStreaks(dt,sp); updateCard(dt); updateFace(dt);
+  updateXF(dt); updateStreaks(dt,sp); updateCard(dt); updateFace(dt); updateUI(dt);
   const rr_=SETTINGS.vrCF===0?0:XR.rough||0; rig.position.set(noise2(pz*2.3,5)*0.012*rr_, (noise2(pz*1.3,3.1)*0.03+noise2(pz*4.1,7)*0.014)*rr_-jolt*0.06, 0); rig.rotation.z=-steerNow*0.03+noise2(pz*1.7,17)*0.02*rr_;
   XR.rumT=(XR.rumT||0)-dt; if (XR.rumT<=0){ XR.rumT=0.1; if (state==='play'&&(XR.rough||0)>0.35) vrBuzz(0.05+0.1*((XR.rough||0)-0.35)*(surfNow==='crust'?1.5:1),70); }
   camera.position.set(0,0,0); camera.quaternion.identity(); camera.updateMatrixWorld(true); }
@@ -3853,7 +3923,7 @@ function xrPost(dt){
     if (!XR.leanInit || state!=='play'){ XR.lbx=hx-(XR.c?XR.c.x:0); XR.lbr=roll; XR.leanInit=state==='play'; }
     XR.lbx+=((hx-(XR.c?XR.c.x:0))-XR.lbx)*Math.min(1,(dt||0.014)/8); XR.lbr+=(roll-XR.lbr)*Math.min(1,(dt||0.014)/8);   // your neutral posture drifts slowly with you
     const raw=((hx-(XR.c?XR.c.x:0))-XR.lbx)/0.14-(roll-XR.lbr)/0.32; XR.lean=Math.abs(raw)<0.3?0:clamp(Math.sign(raw)*(Math.abs(raw)-0.3)/0.7,-1,1);
-    if (state==='play' && XR.lastSt!=='play'){ XR.c={x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw:e.y}; XR.lbx=0; XR.lbr=roll; if ((prog.vrRuns||0)<3 && XR.lastSt!=='pause'){ prog.vrRuns=(prog.vrRuns||0)+1; saveProg(); showCard(); } }   // recentre in the seat
+    if ((state==='play' && XR.lastSt!=='play') || XR.recenter){ const was=XR.lastSt; XR.recenter=false; XR.c={x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw:e.y}; XR.lbx=0; XR.lbr=roll; if (state==='play' && was!=='pause') blink(); if (state==='play' && (prog.vrRuns||0)<3 && was!=='pause'){ prog.vrRuns=(prog.vrRuns||0)+1; saveProg(); showCard(); } }   // recentre in the seat
     XR.lastSt=state; XR.headYaw=e.y-(XR.c?XR.c.yaw:0); camera.matrixWorld.decompose(_hw,_xe.q||(_xe.q=new T.Quaternion()),_hu); spatialListener(_hw,_xe.q); }
   camera.position.copy(XR.E); camera.quaternion.copy(XR.Q); }
 // VR detail runs itself: the render sharpness slides up and down every second to hold the headset's frame rate, and the
@@ -3905,17 +3975,15 @@ async function enterVR(){
     try { const bl=ses.renderState.baseLayer; if (bl && 'fixedFoveation' in bl) bl.fixedFoveation=1; } catch(e){}   // sharp in the middle, cheaper at the edges
     if (ses.updateTargetFrameRate && ses.supportedFrameRates && [...ses.supportedFrameRates].includes(72)) ses.updateTargetFrameRate(72).catch(()=>{});
     ses.addEventListener('end',()=>{ XR.on=false; XR.session=null; scene.add(camera); XR.hud.visible=false; XR.vig.visible=false; if (XR.hud.parent) XR.hud.parent.remove(XR.hud);
-      BLOBS.visible=false; STREAK.m.visible=false; CARD.m.visible=false; XR.face.m.visible=false; XR.face.k=0; qi=XR.prevQi; applyConditions(condNow); applyQuality(true); if (state==='play'||state==='crash') togglePause(); });
-    initAudio(); if (state==='title'||state==='over') startGame();
-    vrWarm();
-    setTimeout(()=>xrMsg('Click the left stick to pause'),1500);
+      XR.lobby=false; MENU.m.visible=false; MSG.m.visible=false; FADE.visible=false; BLOBS.visible=false; STREAK.m.visible=false; CARD.m.visible=false; XR.face.m.visible=false; XR.face.k=0; qi=XR.prevQi; applyConditions(condNow); applyQuality(true); if (state==='play'||state==='crash') togglePause(); });
+    initAudio(); if (state==='title'||state==='over') openLobby(); else vrWarm();
   } catch(e){ XR.on=false; console.error(e); toast("Couldn't start VR here. Open the game's web link in the Meta Quest Browser."); }
 }
 let frameErrs=0;
 function frame(now,xf){ const rawMs=now-last, dt=Math.min(0.05,rawMs/1000); last=now;
-  try { pollPad(); if (XR.on) pollXR(); update(dt); updateCamera(dt);
+  try { pollPad(); XR.pdt=dt; if (XR.on) pollXR(); update(dt); updateCamera(dt);
     if (XR.on){ xrPre(dt); vrVis();   // all around you (it's 360°): full trees close by, pictures far away
-      IMP.U.uHead.value.copy(XR.E); HALO_U.uFogD.value=scene.fog.density; HALO_U.uOp.value=clamp((COND.lamp-0.3)/2,0,1)*(1-0.4*(1-SNOW.sunK)); BLOBS.visible=true; updateBlobs();
+      IMP.U.uHead.value.copy(XR.E); HALO_U.uFogD.value=scene.fog.density; HALO_U.uOp.value=clamp((COND.lamp-0.3)/2,0,1)*(1-0.4*(1-SNOW.sunK)); BLOBS.visible=!XR.lobby; if (!XR.lobby) updateBlobs();
       xrAdapt(rawMs); xrViewScale(xf);
       renderer.setRenderTarget(null); renderer.render(scene,camera); xrPost(dt); }
     else { cullChunks(); renderFrame(); } }
@@ -3930,7 +3998,9 @@ function boot(){
   renderPickers();
   RACE=readRaceLink(); renderRaceBox(); if (RACE) setStep(2);
   last=performance.now(); renderer.setAnimationLoop(frame);   // the same loop runs in the headset
-  if (navigator.xr&&navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-vr').then(ok=>{ for (const id of ['vrBtn','vrBtn2']){ const b=$(id); if (b) b.hidden=!ok; } }).catch(()=>{});
+  // a headset gets a VR-first start screen (setup happens inside the headset); a computer never shows VR buttons
+  if (IS_HEADSET && navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-vr').then(ok=>{ if (!ok) return;
+    for (const id of ['vrBtn','vrBtn2']){ const b=$(id); if (b) b.hidden=false; } if (!RACE){ document.body.classList.add('vrfirst'); $('vrHome').hidden=false; $('vrGo').focus({preventScroll:true}); } }).catch(()=>{});
 }
 setTimeout(boot,30);
 })();

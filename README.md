@@ -27,7 +27,9 @@ After a run, type your name and press **🏁 Challenge a friend** to copy a link
 
 ## VR (Meta Quest)
 
-Open the play link in the Meta Quest Browser, set up your rider, and press **🥽 Ride in VR**.
+Open the play link in the Meta Quest Browser. The game sees the headset and shows one big **Ride in VR** button; you pick your rider, conditions and sled inside the headset, standing by the chalet fire (left stick to choose, A for next, B to go back). On a computer there's no VR button at all.
+
+Three view modes (pick on the Sled step, or press X while paused): **Full feel** moves and shakes like the computer camera; **Medium** (the default for new riders) keeps the horizon level through tricks with softer motion; **High** is the steadiest, for anyone new to VR.
 
 | Control | Action |
 | --- | --- |
@@ -41,5 +43,6 @@ Open the play link in the Meta Quest Browser, set up your rider, and press **�
 | Y (hold) | Look back |
 | Click left thumbstick | Pause and resume |
 | While paused | X: view mode (Full feel, Medium, High) · A: graphics level · click right stick: lean-to-steer |
+| After a run | A: ride again · X: change sled & conditions · B: leave VR |
 
 Your coins, sleds, upgrades and best-run ghost are saved in your own browser.
