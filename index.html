@@ -3776,10 +3776,10 @@ scene.add(XR.dolly); renderer.xr.enabled=true; renderer.xr.setReferenceSpaceType
 function vrBuzz(v,ms,side){ const ses=XR.session; if (!ses) return; for (const src of ses.inputSources){ if (side&&src.handedness!==side) continue; const h=src.gamepad&&src.gamepad.hapticActuators&&src.gamepad.hapticActuators[0]; if (h&&h.pulse) try{ h.pulse(clamp(v,0,1),ms); }catch(e){} } }
 // trick scores and landing calls float up out in front of you instead of sitting on the dashboard
 const XF=(()=>{ const c=canvas(1024,192), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.1,0.2),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0,toneMapped:false,fog:false})); m.renderOrder=998; m.visible=false; XR.dolly.add(m); return {c,t,m,life:0}; })();
-function xrFloat(html,life){ const txt=String(html).replace(/<[^>]+>/g,''), em=(String(html).match(/<em>(.*?)<\/em>/)||[])[1], g=XF.c.getContext('2d'); g.clearRect(0,0,1024,192);
+let xrFloat=function(html,life){ const txt=String(html).replace(/<[^>]+>/g,''), em=(String(html).match(/<em>(.*?)<\/em>/)||[])[1], g=XF.c.getContext('2d'); g.clearRect(0,0,1024,192);
   g.textAlign='center'; g.textBaseline='middle'; g.font='800 84px "Barlow Condensed", Arial, sans-serif'; const pw=Math.min(1010,g.measureText(txt.slice(0,30)).width+100); g.fillStyle=UIC.bg; rrect(g,512-pw/2,20,pw,152,76); g.fill();
   g.fillStyle=em&&txt.indexOf(em)===0?UIC.acc:UIC.fg; g.fillText(txt.slice(0,30),512,96); XF.t.needsUpdate=true; XF.life=XF.max=life||1.8; XF.m.visible=true; }
-function updateXF(dt){ if (XF.life<=0){ XF.m.visible=false; return; } XF.life-=dt; const k=1-XF.life/(XF.max||1.8); XF.m.position.set(0,0.5+k*0.25,-3); XF.m.material.opacity=0.9*Math.min(1,XF.life*2)*Math.min(1,k*8); }
+function updateXF(dt){ XF.m.visible=false; return; if (XF.life<=0){ XF.m.visible=false; return; } XF.life-=dt; const k=1-XF.life/(XF.max||1.8); XF.m.position.set(0,0.5+k*0.25,-3); XF.m.material.opacity=0.9*Math.min(1,XF.life*2)*Math.min(1,k*8); }
 const STREAK=(()=>{ const N=140, g=new T.BufferGeometry(), p=new Float32Array(N*6); g.setAttribute('position',new T.BufferAttribute(p,3));
   const m=new T.LineSegments(g,new T.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false})); m.frustumCulled=false; m.visible=false; scene.add(m); return {N,g,p,m,pts:new Float32Array(N*3),init:false}; })();
 function updateStreaks(dt,sp){ const S=STREAK, P=S.pts, fx=Math.sin(heading), fz=Math.cos(heading), E=XR.E;   // specks of snow hanging in the air that whip past you at your real speed
@@ -3867,8 +3867,39 @@ function updateUI(dt){ if (FADE.parent!==camera) camera.add(FADE); XR.fadeV=Math
   const menuOn=XR.lobby||state==='pause'||state==='over'; MENU.m.visible=menuOn; if (menuOn){ CARD.m.visible=false; XF.m.visible=false; }
   if (menuOn){ if (XR.lobby){ MENU.m.position.set(-0.45,0.02,-1.25); MENU.m.rotation.set(0,0.42,0); } else { MENU.m.position.set(0,0,-1.25); MENU.m.rotation.set(0,0,0); }
     XR.menuT=(XR.menuT||0)-dt; if (XR.menuDirty||XR.menuT<=0){ XR.menuDirty=false; XR.menuT=0.3; drawMenu(); } }
-  XR.msgT-=dt; MSG.m.visible=XR.msgT>0 && !menuOn; if (MSG.m.visible){ MSG.m.position.set(0,-0.36,-1.4); MSG.m.material.opacity=Math.min(1,XR.msgT*2); if (XR.msgDirty){ XR.msgDirty=false; drawMsg(); } } }
-function xrMsg(html){ XR.msg=String(html).replace(/<[^>]+>/g,'').slice(0,40); XR.msgT=2.4; XR.msgDirty=true; }
+  MSG.m.visible=false; updateVH(dt); }
+// ---------- the riding display (minimal floating tags): messages float at the top edge of your view, your speed sits small at the
+// bottom, points pop up and drift away when you earn them. They follow your gaze with a soft lag and fade back while you're mid-trick.
+const VH={g:new T.Group(), O:'#ef6a2e'}; XR.dolly.add(VH.g);
+function vhTag(w,h,pw,ph,x,y){ const p=uiPanel(w,h,pw,ph,VH.g,1003); p.m.position.set(x,y,-1.6); return p; }
+VH.top=vhTag(2048,300,1.75,0.256,0,0.68); VH.spd=vhTag(1024,170,0.56,0.093,0,-0.78); VH.pop=vhTag(800,160,0.4,0.08,0.3,-0.62);
+VH.top.life=0; VH.top.max=1; VH.pop.life=0; VH.lastMph=-1; VH.lastScore=0; VH.pend=0; VH.lives=0;
+function vhText(g,parts,x,y,size,wt){ g.font='italic '+(wt||800)+' '+size+'px "Barlow Condensed", Arial Narrow, Arial, sans-serif'; let tw=0; for (const p of parts) tw+=g.measureText(p[0]).width;
+  let xx=x-tw/2; g.textAlign='left'; for (const [t,c] of parts){ g.fillStyle=c; g.fillText(t,xx,y); xx+=g.measureText(t).width; } return tw; }
+function vhShadow(g){ g.shadowColor='rgba(0,0,0,0.85)'; g.shadowBlur=18; g.shadowOffsetY=3; }
+function topMsg(html,life){ const h=String(html), parts=[]; const re=/<em>(.*?)<\/em>/g; let m, last=0;   // orange for the highlighted words, white for the rest
+  while ((m=re.exec(h))){ if (m.index>last) parts.push([h.slice(last,m.index).replace(/<[^>]+>/g,''),'#ffffff']); parts.push([m[1].toUpperCase(),VH.O]); last=m.index+m[0].length; }
+  if (last<h.length) parts.push([h.slice(last).replace(/<[^>]+>/g,''),'#ffffff']);
+  let main=parts, sub=''; const txt=parts.map(p=>p[0]).join(''), dot=txt.indexOf(' · ');   // "Checkpoint 1 · +6,500 · Pine Forest": first part big, the rest small underneath
+  if (dot>0){ let n=0; main=[]; for (const [t,c] of parts){ if (n+t.length<=dot) main.push([t,c]); else if (n<dot) main.push([t.slice(0,dot-n),c]); n+=t.length; } sub=txt.slice(dot+3).replace(/ · /g,'  ·  '); }
+  const g=VH.top.g; g.clearRect(0,0,2048,300); vhShadow(g); g.textBaseline='middle'; let size=118; g.font='italic 800 '+size+'px Arial'; while (size>60 && g.measureText(main.map(p=>p[0]).join('')).width>1900) size-=6;
+  vhText(g,main,1024,110,size); if (sub) vhText(g,[[sub,'#ffffff']],1024,226,58,700); VH.top.t.needsUpdate=true; VH.top.life=VH.top.max=life||2.6; }
+function xrMsg(html){ topMsg(html,2.6); }
+xrFloat=function(html,life){ topMsg(html,life||2.2); };
+function updateVH(dt){ VH.g.visible=true; const play=state==='play'||state==='crash', menuOn=XR.lobby||state==='pause'||state==='over';
+  // follow your gaze softly: the tags keep their place in your view but lag a little behind quick head turns
+  if (XR.hq){ VH.g.position.copy(XR.hp); const ang=VH.g.quaternion.angleTo(XR.hq); VH.g.quaternion.slerp(XR.hq,Math.min(1,dt*(ang>0.6?9:3.5))); }
+  const trick=!onGround&&(Math.abs(spinRate)+Math.abs(flipRate))>1.5, dim=trick?0.45:1;
+  VH.top.life-=dt; VH.top.m.visible=VH.top.life>0&&!menuOn; if (VH.top.m.visible){ const k=1-VH.top.life/VH.top.max; VH.top.m.material.opacity=Math.min(1,VH.top.life*2.5)*Math.min(1,k*10); VH.top.m.position.y=0.68+Math.min(0.03,k*0.2); }
+  VH.spd.m.visible=play&&!menuOn; if (VH.spd.m.visible){ VH.spd.m.material.opacity=0.92*dim; const mph=Math.round(speedNow()*2.237), lv=Math.max(0,DIFF.lives-crashes);
+    if (lv<VH.lives) VH.livesT=3; VH.lives=lv; VH.livesT=Math.max(0,(VH.livesT||0)-dt);   // after a crash your remaining lives show beside the speed for a few seconds
+    const key=mph+'|'+(VH.livesT>0?lv:''); if (key!==VH.lastMph){ VH.lastMph=key; const g=VH.spd.g; g.clearRect(0,0,1024,170); vhShadow(g); g.textBaseline='middle';
+      vhText(g,VH.livesT>0?[[String(mph),VH.O],[' mph   ','#ffffff'],['●'.repeat(lv)+'○'.repeat(Math.max(0,DIFF.lives-lv)),'#ffffff']]:[[String(mph),VH.O],[' mph','#ffffff']],512,86,112); VH.spd.t.needsUpdate=true; } }
+  if (score<VH.lastScore) VH.lastScore=score;
+  if (score>VH.lastScore){ VH.pend+=score-VH.lastScore; VH.lastScore=score; if (VH.pend>=10){ const g=VH.pop.g; g.clearRect(0,0,800,160); vhShadow(g); g.textBaseline='middle'; vhText(g,[['+'+fmt(VH.pend),VH.O]],400,82,104); VH.pop.t.needsUpdate=true; VH.pop.life=1.3; VH.popAcc=0.45; } }
+  VH.popAcc=Math.max(0,(VH.popAcc||0)-dt); if (VH.popAcc<=0 && VH.pop.life<=0) VH.pend=0;
+  VH.pop.life-=dt; VH.pop.m.visible=VH.pop.life>0&&play&&!menuOn; if (VH.pop.m.visible){ const k=1-VH.pop.life/1.3; VH.pop.m.position.y=-0.62+k*0.12; VH.pop.m.material.opacity=Math.min(1,VH.pop.life*2.2)*dim; } }
+
 function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512,256);
   g.fillStyle=UIC.bg; rrect(g,6,70,500,180,26); g.fill(); g.strokeStyle=UIC.edge; g.lineWidth=3; g.stroke(); g.textBaseline='middle';
   g.textAlign='left'; g.fillStyle=UIC.fg; g.font='800 92px "Barlow Condensed", Arial, sans-serif'; const mph=Math.round(speedNow()*2.237)+''; g.fillText(mph,28,150);
@@ -3918,7 +3949,7 @@ function xrPre(dt){ // the sled carries the dolly; the headset adds your own hea
   XR.dolly.position.copy(EP); if (XR.c) XR.dolly.position.sub(_xc.set(XR.c.x,XR.c.y,XR.c.z).applyQuaternion(XR.dolly.quaternion));
   if (rig.parent!==fpAnchor){ fpAnchor.add(rig); rig.position.set(0,0,0); rig.quaternion.identity(); }
   fpAnchor.position.copy(EP); fpAnchor.rotation.set(pitchB,yawB,rollB,'YXZ'); rig.visible=state!=='crash';
-  if (XR.hud.parent!==fpAnchor) fpAnchor.add(XR.hud); XR.hud.position.set(-0.34,-0.44,-0.56); XR.hud.rotation.set(-0.6,0.45,0.12); XR.hud.scale.setScalar(1); XR.hud.visible=state==='play'||state==='crash';
+  if (XR.hud.parent!==fpAnchor) fpAnchor.add(XR.hud); XR.hud.position.set(-0.34,-0.44,-0.56); XR.hud.rotation.set(-0.6,0.45,0.12); XR.hud.scale.setScalar(1); XR.hud.visible=false;
   XR.hudT-=dt; if (XR.hudT<=0 && XR.hud.visible){ XR.hudT=0.15; drawXRHud(); }
   // comfort edges: the view narrows softly when the motion your eyes see is strongest (speed, turning, tricks, drops) and opens back up when it calms
   const sp=speedNow(), yr=Math.abs(angDiff(camYaw+groundSpin,XR.lastYaw??camYaw))/Math.max(dt,1e-3); XR.lastYaw=camYaw+groundSpin; XR.yr=(XR.yr||0)+(yr-(XR.yr||0))*Math.min(1,dt*6);
@@ -3934,6 +3965,7 @@ function xrPost(dt){
   // the headset's pose (local to the sled) is in the camera right after rendering: use it for lean steering, 3D sound and the wind in your ears
   if (XR.session){ const hx=camera.position.x, e=_xq.setFromQuaternion(camera.quaternion,'YXZ'), roll=e.z;
     if ((state==='play' && XR.lastSt!=='play') || XR.recenter){ const was=XR.lastSt; XR.recenter=false; XR.c={x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw:e.y}; XR.lbx=0; XR.lbr=roll; if (state==='play' && was!=='pause') blink(); if (state==='play' && (prog.vrRuns||0)<3 && was!=='pause'){ prog.vrRuns=(prog.vrRuns||0)+1; saveProg(); showCard(); } }   // recentre in the seat
+    (XR.hq||(XR.hq=new T.Quaternion())).copy(camera.quaternion); (XR.hp||(XR.hp=new T.Vector3())).copy(camera.position);   // head pose for the floating tags
     XR.lastSt=state; XR.headYaw=e.y-(XR.c?XR.c.yaw:0); camera.matrixWorld.decompose(_hw,_xe.q||(_xe.q=new T.Quaternion()),_hu); spatialListener(_hw,_xe.q); }
   camera.position.copy(XR.E); camera.quaternion.copy(XR.Q); }
 // VR detail runs itself: the render sharpness slides up and down every second to hold the headset's frame rate, and the
@@ -3987,7 +4019,7 @@ async function enterVR(){
     try { const bl=ses.renderState.baseLayer; if (bl && 'fixedFoveation' in bl) bl.fixedFoveation=1; } catch(e){}   // sharp in the middle, cheaper at the edges
     if (ses.updateTargetFrameRate && ses.supportedFrameRates && [...ses.supportedFrameRates].includes(72)) ses.updateTargetFrameRate(72).catch(()=>{});
     ses.addEventListener('end',()=>{ XR.on=false; XR.session=null; scene.add(camera); XR.hud.visible=false; XR.vig.visible=false; if (XR.hud.parent) XR.hud.parent.remove(XR.hud);
-      XR.lobby=false; MENU.m.visible=false; MSG.m.visible=false; FADE.visible=false; BLOBS.visible=false; STREAK.m.visible=false; CARD.m.visible=false; XR.face.m.visible=false; XR.face.k=0; qi=XR.prevQi; applyConditions(condNow); applyQuality(true); if (state==='play'||state==='crash') togglePause(); });
+      XR.lobby=false; VH.g.visible=false; MENU.m.visible=false; MSG.m.visible=false; FADE.visible=false; BLOBS.visible=false; STREAK.m.visible=false; CARD.m.visible=false; XR.face.m.visible=false; XR.face.k=0; qi=XR.prevQi; applyConditions(condNow); applyQuality(true); if (state==='play'||state==='crash') togglePause(); });
     initAudio(); if (state==='title'||state==='over') openLobby(); else vrWarm();
   } catch(e){ XR.on=false; console.error(e); toast("Couldn't start VR here. Open the game's web link in the Meta Quest Browser."); }
 }
