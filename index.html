@@ -331,7 +331,7 @@ h2{font-size:clamp(2.6rem,6vw,3.6rem);}
         <span><kbd>C</kbd></span><span>Look back</span>
         <span><kbd>V</kbd></span><span>Switch between rider view and chase view</span>
         <span><kbd>O</kbd></span><span>Goggles on or off: a little more contrast and a little farther through the snow</span>
-        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Left stick steer · right stick spins and flips in the air · right grip tuck · left grip brake · A jump · B goggles · Y look back · click left stick to pause</span>
+        <span>🥽 VR</span><span>Open the game's web link in the Meta Quest Browser and press Ride in VR. Left stick steer · right stick spins and flips in the air · right trigger tuck · left grip brake · A jump · B goggles · Y look back · click left stick to pause</span>
         <span><kbd>P</kbd> / <kbd>Esc</kbd></span><span>Pause</span>
         <span><kbd>M</kbd> · <kbd>N</kbd> · <kbd>F</kbd> · <kbd>Q</kbd></span><span>Sound · music · fullscreen · graphics</span>
       </div>
@@ -1223,6 +1223,19 @@ function lambertOf(src,fresh){
 for (const [m,f,k] of [[OBJ_MAT,1,0.85],[ROCK_MAT,1],[NEEDLE_MAT,0,0.74],[NEEDLE_MAT_L,0,0.74],[BSNOW_MAT,0,0.9],[BSNOW_MAT_L,0,0.9],[CORE_MAT,0,0.8],[PLAIN_MAT],[ROAD_MAT],[RUT_MAT]]) lambertOf(m,f).color.multiplyScalar(k||1);   // a little darker: no self-shadowing inside the trees
 const vm=m=>(QUALITY[qi].vr&&VR_MATS.get(m))||m;
 const VLOW_MAT=new T.MeshLambertMaterial({vertexColors:true,color:0x8a8a8a});   // matches the darker look of the detailed trees' needles
+// headset tree detail levels blend tree by tree as you approach (a soft dissolve), instead of a whole stretch of forest swapping at once
+const LOD_U={uHead:{value:new T.Vector3()}, uF:{value:12}}, LODM={}, LOD_R={det:new T.Vector2(-1,45),lite:new T.Vector2(35,120),liteF:new T.Vector2(-1,60),low:new T.Vector2(110,1e5),lowF:new T.Vector2(50,1e5)};
+for (const grp in LOD_R){ LODM[grp]=new Map();
+  for (const src of grp.startsWith('low')?[VLOW_MAT]:[OBJ_MAT,NEEDLE_MAT,NEEDLE_MAT_L,BSNOW_MAT,BSNOW_MAT_L,CORE_MAT]){ const base=VR_MATS.get(src)||src, m=base.clone(); m.alphaToCoverage=base.alphaToCoverage;
+    m.onBeforeCompile=sh=>{ sh.uniforms.uHead=LOD_U.uHead; sh.uniforms.uF=LOD_U.uF; sh.uniforms.uD={value:LOD_R[grp]};
+      sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform vec3 uHead; uniform vec2 uD; uniform float uF; varying float vLod;')
+        .replace('#include <project_vertex>','#include <project_vertex>\nvec3 lc=(modelMatrix*vec4(instanceMatrix[3].xyz,1.0)).xyz; float ldd=length(lc.xz-uHead.xz); vLod=smoothstep(uD.x-uF,uD.x,ldd)*(1.0-smoothstep(uD.y,uD.y+uF,ldd));');
+      sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vLod;')
+        .replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif (fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(0.06711056,0.00583715))))>=vLod) discard;'); };
+    m.customProgramCacheKey=()=>'treelod'; LODM[grp].set(src,m); } }
+const lm=(grp,mat)=>QUALITY[qi].vr?LODM[grp].get(mat):mat;
+function updateLod(){ const q=QUALITY[qi], ld=q.lodDist||0, iD=q.impD||1e5, iF=q.impF||0; LOD_U.uHead.value.copy(XR.E);
+  LOD_R.det.set(-1,ld>0?ld+4:-60); LOD_R.lite.set(ld>0?ld-4:-1,iD+4); LOD_R.low.set(iD-4,1e5); LOD_R.liteF.set(-1,iF>0?iF+4:-60); LOD_R.lowF.set(iF>0?iF-4:-1,1e5); }
 
 // distant trees: one atlas of four pictures (two views of the pine, the bare tree, the birch) rendered from the real 3D trees
 // under the current light, so they match the trees close by. Each is a single quad that turns to face you.
@@ -1303,7 +1316,7 @@ const WIN_C={cabin:boxCenters(CABIN.win), work:boxCenters(WORKSHOP.win)}, WARM=n
 function vrWarm(){ // compile every headset material up front, so nothing stalls the first time a village or a shadow shows up mid-run
   try { const g=new T.Group(), geo=new T.BoxGeometry(0.01,0.01,0.01); geo.setAttribute('color',new T.Float32BufferAttribute(new Array(geo.attributes.position.count*3).fill(1),3));
     const add=(m,gm)=>{ const im=new T.InstancedMesh(gm||geo,m,1); im.setMatrixAt(0,_im.identity()); im.setColorAt(0,WARM); im.frustumCulled=false; g.add(im); };
-    for (const m of VR_MATS.values()) add(m); add(VLOW_MAT); add(HALOQ_MAT,HALO_GEO); g.position.copy(camera.position); scene.add(g); const dv=DRESS.g?DRESS.g.visible:false; if (DRESS.g) DRESS.g.visible=false; const hid=[]; scene.traverse(o=>{ if (!o.visible && !o.isLight && o!==DRESS.g){ hid.push(o); o.visible=true; } });   // hidden things too (animals, the yeti...), with the riding lights only
+    for (const m of VR_MATS.values()) add(m); add(VLOW_MAT); for (const grp in LODM) for (const m of LODM[grp].values()) add(m); add(HALOQ_MAT,HALO_GEO); g.position.copy(camera.position); scene.add(g); const dv=DRESS.g?DRESS.g.visible:false; if (DRESS.g) DRESS.g.visible=false; const hid=[]; scene.traverse(o=>{ if (!o.visible && !o.isLight && o!==DRESS.g){ hid.push(o); o.visible=true; } });   // hidden things too (animals, the yeti...), with the riding lights only
     try { renderer.compile(scene,camera); } finally { for (const o of hid) o.visible=false; scene.remove(g); if (DRESS.g) DRESS.g.visible=dv; } geo.dispose(); g.traverse(o=>{ if (o.isInstancedMesh) o.dispose&&o.dispose(); }); } catch(e){} }
 function halos(list,group){ if (!list.length) return; const m=new T.InstancedMesh(HALO_GEO,HALOQ_MAT,list.length); m.frustumCulled=false; m.renderOrder=4;
   list.forEach((h,i)=>{ const e=_im.elements; e.fill(0); e[0]=e[5]=e[10]=h[1]; e[15]=1; e[12]=h[0].x; e[13]=h[0].y; e[14]=h[0].z; m.setMatrixAt(i,_im); m.setColorAt(i,h[2]||WARM); });
@@ -1411,18 +1424,18 @@ function* buildChunkGen(k){   // yields between stages so a new stretch of hill 
     list.forEach((o,i)=>{ place(o); tmpM.compose(tmpV,tmpQ,tmpS); m.setMatrixAt(i,tmpM); }); m.instanceMatrix.needsUpdate=true; group.add(m); if(bucket) bucket.push(m); };
   const treeP=o=>{ tmpQ.setFromAxisAngle(UP,o.ry); tmpS.set(o.s,o.s*(o.sy||1),o.s); tmpV.set(o.x,height(o.x,o.z)-0.25,o.z); };
   const sh=q.shadow>0;
-  inst(L.pineN,PINE.wood,OBJ_MAT,sh,null,det,treeP); inst(L.pineN,PINE.needles,NEEDLE_MAT,sh,NEEDLE_DEPTH,det,treeP); inst(L.pineN,PINE.snow,BSNOW_MAT,false,null,det,treeP);
-  inst(L.pineN,PINE_L.wood,OBJ_MAT,sh,null,lite,treeP); inst(L.pineN,PINE_L.needles,NEEDLE_MAT_L,sh,NEEDLE_DEPTH,lite,treeP); inst(L.pineN,PINE_L.snow,BSNOW_MAT_L,false,null,lite,treeP);
+  inst(L.pineN,PINE.wood,lm('det',OBJ_MAT),sh,null,det,treeP); inst(L.pineN,PINE.needles,lm('det',NEEDLE_MAT),sh,NEEDLE_DEPTH,det,treeP); inst(L.pineN,PINE.snow,lm('det',BSNOW_MAT),false,null,det,treeP);
+  inst(L.pineN,PINE_L.wood,lm('lite',OBJ_MAT),sh,null,lite,treeP); inst(L.pineN,PINE_L.needles,lm('lite',NEEDLE_MAT_L),sh,NEEDLE_DEPTH,lite,treeP); inst(L.pineN,PINE_L.snow,lm('lite',BSNOW_MAT_L),false,null,lite,treeP);
   yield;
   if (themeNow==='christmas' && L.pineN.length){ const dr=mulberry(k*977+5), dec=L.pineN.filter(o=>{ const au=Math.abs(o.x-cx(o.z)); return au<24 && dr()<(zoneAt(o.z)==='village'?0.7:au<14?0.22:0.12); });
     if (!dec.length){ const near=L.pineN.filter(o=>Math.abs(o.x-cx(o.z))<30); if (near.length) dec.push(near[(dr()*near.length)|0]); } decorateTrees(dec,group,dr); }
-  inst(L.pineN,PINE.core,CORE_MAT,sh,null,det,treeP); inst(L.pineN,PINE_L.core,CORE_MAT,sh,null,lite,treeP); inst(L.pineF,PINE_L.core,CORE_MAT,false,null,VRB?fLite:(qi===1||qi===2)?lite:null,treeP);
+  inst(L.pineN,PINE.core,lm('det',CORE_MAT),sh,null,det,treeP); inst(L.pineN,PINE_L.core,lm('lite',CORE_MAT),sh,null,lite,treeP); inst(L.pineF,PINE_L.core,lm('liteF',CORE_MAT),false,null,VRB?fLite:(qi===1||qi===2)?lite:null,treeP);
   if (qi===1||qi===2){ inst(L.pineF,PINE.wood,OBJ_MAT,false,null,det,treeP); inst(L.pineF,PINE.needles,NEEDLE_MAT,false,null,det,treeP); inst(L.pineF,PINE.snow,BSNOW_MAT,false,null,det,treeP); inst(L.pineF,PINE.core,CORE_MAT,false,null,det,treeP); }   // full-detail pines off to the sides too (Low graphics and VR keep the light ones)
-  const fL=VRB?fLite:(qi===1||qi===2)?lite:null; inst(L.pineF,PINE_L.wood,OBJ_MAT,false,null,fL,treeP); inst(L.pineF,PINE_L.needles,NEEDLE_MAT_L,false,null,fL,treeP); inst(L.pineF,PINE_L.snow,BSNOW_MAT_L,false,null,fL,treeP);
+  const fL=VRB?fLite:(qi===1||qi===2)?lite:null; inst(L.pineF,PINE_L.wood,lm('liteF',OBJ_MAT),false,null,fL,treeP); inst(L.pineF,PINE_L.needles,lm('liteF',NEEDLE_MAT_L),false,null,fL,treeP); inst(L.pineF,PINE_L.snow,lm('liteF',BSNOW_MAT_L),false,null,fL,treeP);
   yield;
   inst(L.bareN,GEO.bare,OBJ_MAT,sh,null,null,treeP); inst(L.bareF,GEO.bare,OBJ_MAT,false,null,null,treeP);
   inst(L.birchN,GEO.birch,OBJ_MAT,sh,null,null,treeP); inst(L.birchF,GEO.birch,OBJ_MAT,false,null,null,treeP);
-  if (VRB){ inst(L.pineN,GEO.pineV,VLOW_MAT,false,null,imp,treeP); inst(L.pineF,GEO.pineV,VLOW_MAT,false,null,fImp,treeP); }   // simple 3D pines far away
+  if (VRB){ inst(L.pineN,GEO.pineV,lm('low',VLOW_MAT),false,null,imp,treeP); inst(L.pineF,GEO.pineV,lm('lowF',VLOW_MAT),false,null,fImp,treeP); }   // simple 3D pines far away
   inst(L.rock,GEO.rock,ROCK_MAT,sh,null,null,o=>{ tmpQ.setFromAxisAngle(UP,o.ry); tmpS.set(o.s*1.1,o.s,o.s*0.95); tmpV.set(o.x,height(o.x,o.z)+0.12*o.s,o.z); });
   inst(L.log,GEO.log,OBJ_MAT,sh,null,null,o=>{ tmpQ.setFromAxisAngle(UP,pathHeading(o.z)+o.ry); tmpS.set(o.len,1,1); tmpV.set(o.x,gH(o.x,o.z)+0.2,o.z); });
   inst(L.flag,GEO.flag,OBJ_MAT,sh,null,null,o=>{ tmpQ.setFromAxisAngle(UP,0.6); tmpS.set(1,1,1); tmpV.set(o.x,height(o.x,o.z),o.z); });
@@ -3749,7 +3762,7 @@ let last=performance.now();
 /* ---------------- VR (Meta Quest and other WebXR headsets) ----------------
    You sit on the sled: your head looks around freely while the sled carries you. The world stays level (only your
    heading turns), spins and flips don't swing your view, and a soft dark edge closes in at speed, all to keep it comfortable.
-   Left stick steer · right stick spins and flips in the air · right grip tuck · left grip brake · A jump · B goggles · Y look back · click left stick to pause
+   Left stick steer · right stick spins and flips in the air · right trigger tuck · left grip brake · A jump · B goggles · Y look back · click left stick to pause
    · X goggles · Y pause. */
 const XR={vp:0,vr:0,guardT:-6,guardN:0,on:false,session:null,dolly:new T.Group(),hud:null,hudC:null,hudT:0,msg:'',msgT:0,prevQi:2,btnWas:{},E:new T.Vector3(),Q:new T.Quaternion(),vig:null};
 scene.add(XR.dolly); renderer.xr.enabled=true; renderer.xr.setReferenceSpaceType('local');
@@ -3781,7 +3794,7 @@ function updateStreaks(dt,sp){ const S=STREAK, P=S.pts, fx=Math.sin(heading), fz
 const CARD=(()=>{ const c=canvas(1024,620), t=tex(c,true,false); t.minFilter=T.LinearFilter; const m=new T.Mesh(new T.PlaneGeometry(1.24,0.75),new T.MeshBasicMaterial({map:t,transparent:true,depthTest:false,depthWrite:false,opacity:0,toneMapped:false,fog:false})); m.renderOrder=997; m.visible=false; XR.dolly.add(m);
   const g=c.getContext('2d'); g.fillStyle='rgba(9,15,23,0.95)'; g.beginPath(); g.roundRect?g.roundRect(0,0,1024,620,40):g.rect(0,0,1024,620); g.fill();
   g.textAlign='left'; g.fillStyle='#ffd25e'; g.font='800 64px "Barlow Condensed", Arial, sans-serif'; g.fillText('HOW TO RIDE',60,100);
-  const rows=[['Left stick','steer'],['Right grip','tuck for speed'],['Left grip','brake'],['A','jump'],['Right stick (in the air)','spin and flip'],['Y  ·  left-stick click','look back  ·  pause']];
+  const rows=[['Left stick','steer'],['Right trigger','tuck for speed'],['Left grip','brake'],['A','jump'],['Right stick (in the air)','spin and flip'],['Y  ·  left-stick click','look back  ·  pause']];
   rows.forEach(([a,b],k)=>{ g.font='700 40px Arial, sans-serif'; g.fillStyle='#ffffff'; g.fillText(a,60,180+k*70); g.fillStyle='#dbe4ee'; g.font='600 40px Arial, sans-serif'; g.fillText(b,640,180+k*70); }); t.needsUpdate=true;
   return {m,life:0}; })();
 function showCard(){ CARD.life=8; }
@@ -3814,7 +3827,7 @@ function lobbyRow(id){ if (id==='vrView') return {names:CF_NAME,cur:SETTINGS.vrC
 function lobbyChange(id,d){ if (id==='vrView'){ SETTINGS.vrCF=(SETTINGS.vrCF+d+3)%3; saveSettings(); return; }
   const r=lobbyRow(id); if (!r.ch||!r.ch.length) return; for (let n=1;n<=r.ch.length;n++){ const b=r.ch[(r.cur+d*n+r.ch.length*4)%r.ch.length]; if (!b.classList.contains('locked')){ b.click(); break; } }
   renderRider(); renderPickers(); }
-const VIEW_TIP=['Moves and shakes like the computer camera','Level view in tricks, softer motion · best for most','Steadiest: for anyone new to VR'];
+const VIEW_TIP=['Moves and shakes like the computer camera','Rides your tricks, steadier on the snow · best for most','Level view in tricks: steadiest, for anyone new to VR'];
 function drawMenu(){ const {g}=MENU; g.clearRect(0,0,1024,800); g.fillStyle=UIC.bg; rrect(g,6,6,1012,788,44); g.fill(); g.strokeStyle=UIC.edge; g.lineWidth=4; g.stroke();
   g.textBaseline='middle'; const line=(k,a,y)=>{ g.textAlign='left'; g.font='800 40px Arial, sans-serif'; g.fillStyle=UIC.acc; g.fillText(k,70,y); g.font='600 40px Arial, sans-serif'; g.fillStyle=UIC.fg; g.fillText(a,420,y); };
   if (XR.lobby){ const L=LOBBY, S=L.steps[L.step];
@@ -3835,7 +3848,7 @@ function drawMenu(){ const {g}=MENU; g.clearRect(0,0,1024,800); g.fillStyle=UIC.
     line('A','Ride again',360); line('X','Change sled & conditions',450); line('B','Leave VR',540); }
   else { g.textAlign='center'; g.font='italic 800 72px "Barlow Condensed", Arial, sans-serif'; g.fillStyle=UIC.fg; g.fillText('PAUSED',512,96);
     line('Left stick','Click to keep riding',240); line('X','View: '+CF_NAME[SETTINGS.vrCF],330); line('A','Graphics: '+(VRA.auto?'Auto':QUALITY[qi].name.replace('VR ','')),420);
-    line('Right stick','Click: lean steer '+(SETTINGS.vrLean?'on':'off'),510); line('B','Leave VR',600);
+    line('B','Leave VR',510);
     g.textAlign='center'; g.font='500 30px Arial, sans-serif'; g.fillStyle=UIC.dim; g.fillText(VIEW_TIP[SETTINGS.vrCF],512,710); }
   MENU.t.needsUpdate=true; }
 function wrapText(g,t,x,y,w,lh){ const words=String(t||'').split(' '); let ln='', yy=y; for (const wd of words){ const tst=ln?ln+' '+wd:wd; if (g.measureText(tst).width>w && ln){ g.fillText(ln,x,yy); ln=wd; yy+=lh; if (yy>y+lh*2) return; } else ln=tst; } if (ln) g.fillText(ln,x,yy); }
@@ -3864,7 +3877,7 @@ function drawXRHud(){ const c=XR.hudC, g=c.getContext('2d'); g.clearRect(0,0,512
   g.font='700 28px Arial, sans-serif'; g.fillStyle=UIC.fg; g.fillText(fmt(score)+' pts  '+'●'.repeat(Math.max(0,DIFF.lives-crashes))+'○'.repeat(Math.min(DIFF.lives,crashes)),488,166);
   g.font='600 24px Arial, sans-serif'; g.fillStyle=UIC.dim; g.fillText(ZNAME[zoneAt(pz)]+(SETTINGS.goggles?' · goggles':''),488,214);
   XR.hud.material.map.needsUpdate=true; }
-// Controller layout. Right hand: grip tuck, trigger trick, A jump, B goggles, stick = tricks.
+// Controller layout. Right hand: trigger tuck, grip trick, A jump, B goggles, stick = tricks.
 // Left hand: grip brake, trigger trick, X trick, Y look back, stick = steer. Click the left stick to pause.
 function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)=>{ const was=XR.btnWas[id]; XR.btnWas[id]=on; return on&&!was; };
   if (XR.lobby){ let gL=null, gR=null; for (const src of ses.inputSources){ if (!src.gamepad) continue; if (src.handedness==='left') gL=src.gamepad; else gR=src.gamepad; } lobbyInput(gL,gR,pressed,XR.pdt||0.014); return; }
@@ -3878,21 +3891,21 @@ function pollXR(){ const ses=XR.session; if (!ses) return; const pressed=(id,on)
       if (pressed('X',b(4))){ if (state==='over') openLobby(); else if (state==='pause'){ SETTINGS.vrCF=(SETTINGS.vrCF+1)%3; saveSettings(); XR.menuDirty=true; } } }
     else {
       tx=dz(ax,0.25); ty=dz(ay,0.25);
-      if (b(1)) padTuck=true; if (b(0)) trickBtn=true;
+      if (b(0)) padTuck=true; if (b(1)) trickBtn=true;   // right trigger tucks, right grip is a trick button
       const a=pressed('A',b(4)); if (a){ if (state==='play'){ hopReq=0.15; vrBuzz(0.18,22,'right'); } else if (state==='over') startGame(); else if (state==='pause'){ cycleVRLevel(); XR.menuDirty=true; } }
       if (pressed('B',b(5))){ if (paused) ses.end(); else setGoggles(!SETTINGS.goggles); }
-      if (pressed('RS',b(3)) && paused){ SETTINGS.vrLean=!SETTINGS.vrLean; saveSettings(); XR.leanInit=false; XR.menuDirty=true; } } }
+    } }
   // tricks: in the air the right stick does them by itself (a trick button works too); on the ground a trick button + right stick spins a saucer or tube
   const air=state==='play'&&!onGround&&time-airStart>0.12, stick=Math.abs(tx)>0||Math.abs(ty)>0;   // (not on the tiny hops over bumps)
-  if (trickBtn || (air&&stick)){ padTrick=true; if (stick){ padSteer=clamp(tx*1.3,-1,1); padPitch=clamp(ty*1.3,-1,1); } else if (air){ padSteer=0; } }
-  if (SETTINGS.vrLean && state==='play' && onGround && XR.lean && !padTrick) padSteer=clamp(padSteer+XR.lean,-1,1); }   // lean your body into the turn (adds to the stick)
+  if (trickBtn || (air&&stick)){ padTrick=true; padSteer=clamp(tx*1.3,-1,1); padPitch=clamp(ty*1.3,-1,1); }
+}
 function xrPre(dt){ // the sled carries the dolly; the headset adds your own head movement on top
   XR.E.copy(camera.position); XR.Q.copy(camera.quaternion);
   if (XR.lobby){ // setting up by the chalet fire: stand where the menu camera stands, facing your rider
     const P=DRESS.pos, fy=Math.atan2(-(P.x+1.0-XR.E.x),-(P.z-XR.E.z)); XR.dolly.rotation.set(0,fy-(XR.c?XR.c.yaw:0),0,'YXZ');   // face the rider by the fire
     XR.dolly.position.copy(XR.E); if (XR.c) XR.dolly.position.sub(_xc.set(XR.c.x,XR.c.y,XR.c.z).applyQuaternion(XR.dolly.quaternion));
     XR.hud.visible=false; XR.vig.visible=false; STREAK.m.visible=false; CARD.m.visible=false; rig.visible=false; updateUI(dt); camera.position.set(0,0,0); camera.quaternion.identity(); camera.updateMatrixWorld(true); return; }
-  const air=state==='play'&&!onGround, full=SETTINGS.vrCF===0, DO=DECK_OFF[SLED.form], cf=[0.35,0.8,1.4][SETTINGS.vrCF];
+  const air=state==='play'&&!onGround, full=SETTINGS.vrCF<2, DO=DECK_OFF[SLED.form], cf=[0.35,0.8,1.4][SETTINGS.vrCF];
   // comfort: smooth out the small, fast up-and-down jiggle from bumps (your inner ear hates that most); big moves still come straight through
   if (!XR.syOk || Math.abs(XR.E.y-XR.sy)>1.5) XR.sy=XR.E.y; XR.sy+=(XR.E.y-XR.sy)*(SETTINGS.vrCF===0?1:Math.min(1,dt*(air?20:11))); XR.sy=clamp(XR.sy,XR.E.y-0.06,XR.E.y+0.06); XR.syOk=true;
   const EP=_xe.set(XR.E.x,XR.sy,XR.E.z);
@@ -3920,9 +3933,6 @@ const _xc=new T.Vector3(), _xe=new T.Vector3(), _xq=new T.Euler(), _hw=new T.Vec
 function xrPost(dt){
   // the headset's pose (local to the sled) is in the camera right after rendering: use it for lean steering, 3D sound and the wind in your ears
   if (XR.session){ const hx=camera.position.x, e=_xq.setFromQuaternion(camera.quaternion,'YXZ'), roll=e.z;
-    if (!XR.leanInit || state!=='play'){ XR.lbx=hx-(XR.c?XR.c.x:0); XR.lbr=roll; XR.leanInit=state==='play'; }
-    XR.lbx+=((hx-(XR.c?XR.c.x:0))-XR.lbx)*Math.min(1,(dt||0.014)/8); XR.lbr+=(roll-XR.lbr)*Math.min(1,(dt||0.014)/8);   // your neutral posture drifts slowly with you
-    const raw=((hx-(XR.c?XR.c.x:0))-XR.lbx)/0.14-(roll-XR.lbr)/0.32; XR.lean=Math.abs(raw)<0.3?0:clamp(Math.sign(raw)*(Math.abs(raw)-0.3)/0.7,-1,1);
     if ((state==='play' && XR.lastSt!=='play') || XR.recenter){ const was=XR.lastSt; XR.recenter=false; XR.c={x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw:e.y}; XR.lbx=0; XR.lbr=roll; if (state==='play' && was!=='pause') blink(); if (state==='play' && (prog.vrRuns||0)<3 && was!=='pause'){ prog.vrRuns=(prog.vrRuns||0)+1; saveProg(); showCard(); } }   // recentre in the seat
     XR.lastSt=state; XR.headYaw=e.y-(XR.c?XR.c.yaw:0); camera.matrixWorld.decompose(_hw,_xe.q||(_xe.q=new T.Quaternion()),_hu); spatialListener(_hw,_xe.q); }
   camera.position.copy(XR.E); camera.quaternion.copy(XR.Q); }
@@ -3935,8 +3945,10 @@ function vrTier(v){ v=clamp(v,3,5); if (v===qi) return false; qi=v; flakeGeo.set
 function setVRLevel(v,why){ vrTier(v); try{ localStorage.setItem('sledVRq',VRA.auto?'auto':String(qi)); }catch(e){} xrMsg((VRA.auto?'Auto detail · ':'')+QUALITY[qi].name+(why?' · '+why:'')); }
 function cycleVRLevel(){ if (VRA.auto){ VRA.auto=false; setVRLevel(3); } else if (qi<5) setVRLevel(qi+1); else { VRA.auto=true; VRA.good=0; VRA.up=0; setVRLevel(qi,'adjusts itself'); } }
 function vrVis(){ const q=QUALITY[qi], ld=q.lodDist||0, iD=q.impD||1e9, iF=q.impF||0;   // which version of each tree to draw, by distance
-  for (const g of chunks.values()){ g.visible=true; const u=g.userData, dz=Math.abs(u.zc-pz), a=dz<ld, b=dz<iD, f=dz<iF;
-    for (const m of u.det) m.visible=a; for (const m of u.lite) m.visible=!a&&b; for (const m of u.near) m.visible=b; for (const m of u.imp) m.visible=!b; for (const m of u.fLite) m.visible=f; for (const m of u.fImp) m.visible=!f; } }
+  updateLod(); const M=45;   // a chunk is 50 m long: draw each level wherever any of its trees could be in range, the shader blends tree by tree
+  for (const g of chunks.values()){ g.visible=true; const u=g.userData, dz=Math.abs(u.zc-pz), lo=Math.max(0,dz-M), hi=dz+M;
+    const a=ld>0&&lo<ld+16, b=lo<iD+16&&hi>ld-16, c=hi>iD-16, f=iF>0&&lo<iF+16, h=hi>iF-16;
+    for (const m of u.det) m.visible=a; for (const m of u.lite) m.visible=b; for (const m of u.near) m.visible=true; for (const m of u.imp) m.visible=c; for (const m of u.fLite) m.visible=f; for (const m of u.fImp) m.visible=h; } }
 function xrViewScale(xf){ if (!xf||!XR.session) return; let pose=null; try { pose=xf.getViewerPose(renderer.xr.getReferenceSpace()); } catch(e){} if (!pose) return;
   for (const v of pose.views) if (typeof v.requestViewportScale==='function'){ VRA.vsOK=true; v.requestViewportScale(VRA.vs); } }
 function xrAdapt(ms){ const A=VRA; if (state!=='play'){ A.win=A.miss=A.n=0; A.cool=Math.min(A.cool,-2); return; }   // judge only while riding, a couple of seconds after any pause
